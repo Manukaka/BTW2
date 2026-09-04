@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How was your trip?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="public-config.js"></script>
+<style>
+  :root{ --navy:#12303D; --teal:#1F7A6C; --gold:#C98A3D; --paper:#F3F5F1; --line:#E1E4DF; --muted:#6B7680; --ink:#1A2229; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Public Sans',sans-serif; background:var(--paper); color:var(--ink);
+        display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+  .card{ width:100%; max-width:460px; background:#fff; border-radius:18px; overflow:hidden; box-shadow:0 12px 40px rgba(12,35,45,.12); }
+  .head{ background:var(--navy); color:#fff; padding:24px 26px 20px; }
+  .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  h1{ font-family:'Fraunces',serif; font-size:24px; font-weight:600; margin:8px 0 4px; }
+  .sub{ font-size:13.5px; color:#B9C6CC; margin:0; }
+  .body{ padding:22px 26px 26px; }
+  .stars{ display:flex; gap:6px; justify-content:center; margin:6px 0 18px; }
+  .star{ font-size:40px; cursor:pointer; color:#D8DBD3; transition:.1s; background:none; border:0; padding:0 2px; line-height:1; }
+  .star.on{ color:var(--gold); } .star:hover{ transform:scale(1.1); }
+  label{ display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin:0 0 5px; }
+  textarea{ width:100%; border:1px solid var(--line); border-radius:9px; padding:10px 12px; font-size:15px; font-family:inherit; }
+  textarea:focus{ outline:2px solid var(--teal); border-color:var(--teal); }
+  button.submit{ width:100%; background:var(--teal); color:#fff; border:0; border-radius:9px; padding:13px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; margin-top:14px; }
+  button.submit:disabled{ opacity:.6; }
+  .msg{ margin-top:12px; font-size:13px; color:#B8483D; display:none; }
+  .done{ padding:36px 26px; text-align:center; display:none; }
+  .done h2{ font-family:'Fraunces',serif; font-size:22px; margin:10px 0 6px; }
+  .done p{ font-size:14px; color:var(--muted); margin:0 0 16px; }
+  .gbtn{ display:inline-block; background:#1A73E8; color:#fff; padding:12px 18px; border-radius:9px; font-weight:700; text-decoration:none; font-size:14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="eyebrow" id="agency-tag"></div>
+    <h1>How was your trip?</h1>
+    <p class="sub" id="greet">Your feedback helps us plan even better journeys.</p>
+  </div>
+  <div class="body" id="form-body">
+    <div class="stars" id="stars"></div>
+    <label for="comment">Tell us more (optional)</label>
+    <textarea id="comment" rows="4" placeholder="Hotels, transport, what you loved, what we could improve…"></textarea>
+    <button class="submit" id="submit-btn" disabled>Submit feedback</button>
+    <div class="msg" id="err"></div>
+  </div>
+  <div class="done" id="done">
+    <div style="font-size:40px;">🙏</div>
+    <h2>Thank you!</h2>
+    <p id="done-text"></p>
+    <a class="gbtn" id="gbtn" href="#" style="display:none;">Leave a Google review</a>
+  </div>
+</div>
+
+<script>
+const CFG = window.BTW_PUBLIC || {};
+const q = new URLSearchParams(location.search);
+const client = q.get('c') || '';
+const agency = q.get('a') || CFG.AGENCY_NAME || 'Beyond Tourism World';
+const reviewUrl = q.get('g') || '';
+document.getElementById('agency-tag').textContent = agency;
+if(client) document.getElementById('greet').textContent = `Hi ${client}, thanks for travelling with ${agency}!`;
+
+let rating = 0;
+const starsEl = document.getElementById('stars');
+starsEl.innerHTML = [1,2,3,4,5].map(n=>`<button class="star" data-n="${n}" aria-label="${n} star">★</button>`).join('');
+starsEl.querySelectorAll('.star').forEach(b=>b.addEventListener('click', ()=>{
+  rating = Number(b.dataset.n);
+  starsEl.querySelectorAll('.star').forEach(s=>s.classList.toggle('on', Number(s.dataset.n)<=rating));
+  document.getElementById('submit-btn').disabled = false;
+}));
+
+document.getElementById('submit-btn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('submit-btn'), err=document.getElementById('err');
+  err.style.display='none';
+  if(!rating) return;
+  btn.disabled=true; btn.textContent='Sending…';
+  const comment = document.getElementById('comment').value.trim();
+
+  if(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY){
+    try{
+      const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+      const { error } = await sb.from('feedback_public').insert({ client_name: client||null, rating, comment: comment||null });
+      if(error) throw error;
+    }catch(e){
+      console.error(e);
+      err.textContent='Sorry, that did not go through. Please try again.'; err.style.display='block';
+      btn.disabled=false; btn.textContent='Submit feedback'; return;
+    }
+  }
+
+  document.getElementById('form-body').style.display='none';
+  const done=document.getElementById('done'); done.style.display='block';
+  const text=document.getElementById('done-text'), g=document.getElementById('gbtn');
+  if(rating>=4 && reviewUrl){
+    text.textContent = 'We are so glad you enjoyed it. Would you share this on Google? It takes a minute and really helps our small team.';
+    g.href = reviewUrl; g.style.display='inline-block';
+    setTimeout(()=>{ location.href = reviewUrl; }, 4000);
+  } else if(rating>=4){
+    text.textContent = 'We are so glad you enjoyed it — safe travels until next time!';
+  } else {
+    text.textContent = `Thank you for being honest. ${agency} will reach out personally to make things right.`;
+  }
+});
+</script>
+</body>
+</html>

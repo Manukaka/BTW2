@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan your trip — Beyond Tourism World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="public-config.js"></script>
+<style>
+  :root{ --navy:#12303D; --teal:#1F7A6C; --gold:#C98A3D; --paper:#F3F5F1; --line:#E1E4DF; --muted:#6B7680; --ink:#1A2229; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Public Sans',sans-serif; background:var(--paper); color:var(--ink);
+        display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+  .card{ width:100%; max-width:520px; background:#fff; border-radius:18px; overflow:hidden;
+         box-shadow:0 12px 40px rgba(12,35,45,.12); }
+  .head{ background:var(--navy); color:#fff; padding:26px 26px 22px; }
+  .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em;
+            text-transform:uppercase; color:var(--gold); }
+  h1{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; margin:8px 0 6px; line-height:1.15; }
+  .sub{ font-size:13.5px; color:#B9C6CC; margin:0; }
+  form{ padding:24px 26px 26px; }
+  label{ display:block; font-size:12px; font-weight:600; color:var(--muted);
+         text-transform:uppercase; letter-spacing:.04em; margin:0 0 5px; }
+  input, select, textarea{ width:100%; border:1px solid var(--line); border-radius:9px;
+    padding:10px 12px; font-size:15px; font-family:inherit; color:var(--ink); background:#fff; }
+  input:focus, select:focus, textarea:focus{ outline:2px solid var(--teal); outline-offset:1px; border-color:var(--teal); }
+  .row{ display:flex; gap:12px; } .row > div{ flex:1; }
+  .field{ margin-bottom:15px; }
+  button{ width:100%; background:var(--teal); color:#fff; border:0; border-radius:9px;
+    padding:13px; font-size:15px; font-weight:700; font-family:inherit; cursor:pointer; margin-top:4px; }
+  button:hover{ background:#186257; } button:disabled{ opacity:.6; cursor:not-allowed; }
+  .msg{ margin-top:14px; font-size:13.5px; padding:11px 13px; border-radius:9px; display:none; }
+  .ok{ background:#E8F3EC; color:#276B45; } .err{ background:#FBEDEB; color:#B8483D; }
+  .foot{ text-align:center; font-size:11.5px; color:var(--muted); padding:0 26px 22px; }
+  .done{ padding:40px 26px; text-align:center; display:none; }
+  .done .tick{ font-size:40px; }
+  .done h2{ font-family:'Fraunces',serif; font-size:22px; margin:10px 0 6px; }
+  .done p{ font-size:14px; color:var(--muted); margin:0; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="head">
+    <div class="eyebrow" id="agency-tag">Beyond Tourism World</div>
+    <h1>Let's plan your trip</h1>
+    <p class="sub">Tell us a little about your travel plans and we'll come back with options within one working day.</p>
+  </div>
+
+  <form id="inquiry-form">
+    <div class="field"><label for="name">Your name *</label><input id="name" name="name" required autocomplete="name"></div>
+    <div class="row">
+      <div class="field"><label for="phone">WhatsApp number *</label><input id="phone" name="phone" required inputmode="tel" placeholder="+91 98xxx xxxxx" autocomplete="tel"></div>
+      <div class="field"><label for="email">Email</label><input id="email" name="email" type="email" autocomplete="email"></div>
+    </div>
+    <div class="field"><label for="destination">Where would you like to go? *</label><input id="destination" name="destination" required placeholder="Bali, Kerala, Europe…"></div>
+    <div class="row">
+      <div class="field"><label for="pax">Travellers</label><input id="pax" name="pax" type="number" min="1" value="2"></div>
+      <div class="field"><label for="travel_date">Approx. travel date</label><input id="travel_date" name="travel_date" type="date"></div>
+    </div>
+    <div class="field"><label for="message">Anything else we should know?</label><textarea id="message" name="message" rows="3" placeholder="Budget, hotel preference, occasion…"></textarea></div>
+    <button type="submit" id="submit-btn">Send my enquiry</button>
+    <div class="msg err" id="err-msg"></div>
+  </form>
+
+  <div class="done" id="done-panel">
+    <div class="tick">✅</div>
+    <h2>Thank you — we've got it.</h2>
+    <p>Our team will get in touch on WhatsApp shortly with a few options for you.</p>
+  </div>
+
+  <div class="foot" id="foot-note"></div>
+</div>
+
+<script>
+const CFG = window.BTW_PUBLIC || {};
+const SUPABASE_URL = CFG.SUPABASE_URL || '', SUPABASE_ANON_KEY = CFG.SUPABASE_ANON_KEY || '';
+const AGENCY_NAME = CFG.AGENCY_NAME || 'Beyond Tourism World', AGENCY_PHONE = CFG.AGENCY_PHONE || '';
+
+document.getElementById('agency-tag').textContent = AGENCY_NAME;
+
+const form = document.getElementById('inquiry-form');
+const btn  = document.getElementById('submit-btn');
+const errBox = document.getElementById('err-msg');
+const foot = document.getElementById('foot-note');
+
+let sb = null;
+if(SUPABASE_URL && SUPABASE_ANON_KEY){
+  try{ sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); }
+  catch(e){ console.error('Supabase init failed', e); }
+}
+if(!sb){
+  foot.textContent = 'Setup needed: add your Supabase URL and anon key in public-config.js.';
+}
+
+function showError(text){ errBox.textContent = text; errBox.style.display='block'; }
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errBox.style.display='none';
+  const fd = new FormData(form);
+  const payload = {
+    name: (fd.get('name')||'').trim(),
+    phone: (fd.get('phone')||'').trim(),
+    email: (fd.get('email')||'').trim() || null,
+    destination: (fd.get('destination')||'').trim(),
+    pax: Number(fd.get('pax')) || 1,
+    travel_date: fd.get('travel_date') || null,
+    message: (fd.get('message')||'').trim() || null,
+  };
+
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  // No backend configured → fall back to opening WhatsApp with the details.
+  if(!sb){
+    if(AGENCY_PHONE){
+      const text = `New enquiry\n\nName: ${payload.name}\nPhone: ${payload.phone}\nDestination: ${payload.destination}\nTravellers: ${payload.pax}\nDate: ${payload.travel_date || 'flexible'}\n${payload.message ? '\nNotes: '+payload.message : ''}`;
+      window.open('https://wa.me/' + AGENCY_PHONE.replace(/\D/g,'') + '?text=' + encodeURIComponent(text), '_blank');
+      form.style.display='none'; document.getElementById('done-panel').style.display='block';
+    } else {
+      showError('This form is not connected yet. Please call or WhatsApp us directly.');
+      btn.disabled=false; btn.textContent='Send my enquiry';
+    }
+    return;
+  }
+
+  try{
+    const { error } = await sb.from('inquiries').insert(payload);
+    if(error) throw error;
+    form.style.display='none';
+    document.getElementById('done-panel').style.display='block';
+    foot.textContent = '';
+  }catch(err){
+    console.error(err);
+    showError('Sorry, something went wrong sending that. Please try again, or WhatsApp us directly.');
+    btn.disabled=false; btn.textContent='Send my enquiry';
+  }
+});
+</script>
+</body>
+</html>

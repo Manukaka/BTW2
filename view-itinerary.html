@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your travel proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="public-config.js"></script>
+<style>
+  :root{ --navy:#12303D; --teal:#1F7A6C; --gold:#C98A3D; --paper:#F3F5F1; --line:#E1E4DF; --muted:#6B7680; --ink:#1A2229; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Public Sans',sans-serif; background:var(--paper); color:var(--ink); }
+  .wrap{ max-width:760px; margin:0 auto; padding:20px 16px 60px; }
+  .card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 1px 2px rgba(18,48,61,.06),0 1px 8px rgba(18,48,61,.05); }
+  .cover{ width:100%; height:220px; object-fit:cover; display:block; }
+  .head{ background:var(--navy); color:#fff; padding:22px 24px; }
+  .eyebrow{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); }
+  h1{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; margin:6px 0 4px; line-height:1.15; }
+  .sub{ font-size:13px; color:#B9C6CC; }
+  .body{ padding:22px 24px; }
+  .day{ border-left:3px solid var(--gold); padding:2px 0 10px 14px; margin-bottom:16px; }
+  .dl{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); }
+  .dt{ font-weight:600; font-size:16px; margin:3px 0 4px; }
+  .dn{ font-size:14px; color:#3A444C; margin-bottom:5px; }
+  .dm{ font-size:12px; color:var(--muted); }
+  .cols{ display:flex; gap:20px; flex-wrap:wrap; margin-top:12px; }
+  .cols > div{ flex:1; min-width:220px; }
+  ul{ padding-left:18px; margin:6px 0 0; font-size:13px; color:#3A444C; } li{ margin-bottom:4px; }
+  .price{ margin-top:22px; background:var(--paper); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:baseline; }
+  .price b{ font-family:'JetBrains Mono',monospace; font-size:22px; }
+  table{ width:100%; border-collapse:collapse; margin-top:12px; font-size:13px; }
+  th{ text-align:left; padding:8px 10px; border-bottom:2px solid var(--navy); font-family:'Fraunces',serif; font-size:15px; }
+  td{ padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.k{ font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); width:90px; }
+  td.hi{ background:#FFF7EA; font-weight:600; }
+  .terms{ margin-top:16px; font-size:11.5px; color:var(--muted); line-height:1.5; }
+  .cta{ margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:11px 16px; border-radius:9px; font-weight:700; font-size:14px; text-decoration:none; }
+  .wa{ background:#25D366; color:#0B3D22; } .call{ background:var(--navy); color:#fff; }
+  .foot{ text-align:center; font-size:12px; color:var(--muted); margin-top:20px; }
+  .msg{ padding:60px 20px; text-align:center; color:var(--muted); }
+  @media print{ .cta{ display:none; } body{ background:#fff; } .card{ box-shadow:none; } }
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card" id="root"><div class="msg">Loading your proposal…</div></div>
+<div class="foot" id="foot"></div></div>
+
+<script>
+const CFG = window.BTW_PUBLIC || {};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = d => { if(!d) return ''; const dt=new Date(d+'T00:00:00'); return isNaN(dt)?d:dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); };
+const money = n => '₹' + (Number(n)||0).toLocaleString('en-IN');
+const nights = (a,b) => (a&&b) ? Math.max(0, Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000)) : 0;
+
+async function main(){
+  const root = document.getElementById('root');
+  const token = new URLSearchParams(location.search).get('t');
+  if(!token){ root.innerHTML = '<div class="msg">This link is missing its token.</div>'; return; }
+  if(!CFG.SUPABASE_URL || !CFG.SUPABASE_ANON_KEY){ root.innerHTML='<div class="msg">This page is not configured yet (public-config.js).</div>'; return; }
+  let it;
+  try{
+    const sb = window.supabase.createClient(CFG.SUPABASE_URL, CFG.SUPABASE_ANON_KEY);
+    const { data, error } = await sb.from('shared_itineraries').select('data').eq('token', token).maybeSingle();
+    if(error) throw error;
+    if(!data){ root.innerHTML='<div class="msg">This proposal link is no longer available.</div>'; return; }
+    it = data.data;
+  }catch(e){ console.error(e); root.innerHTML='<div class="msg">Could not load the proposal. Please try again.</div>'; return; }
+
+  const ag = it.agency || {};
+  const n = nights(it.startDate, it.endDate);
+  document.title = `${it.destination} — ${ag.name||''}`;
+  const opts = it.options || [];
+  const differs = k => new Set(opts.map(o=>String(o[k]??''))).size > 1;
+  const wa = ag.phone ? `https://wa.me/${String(ag.phone).replace(/\D/g,'')}?text=${encodeURIComponent(`Hi ${ag.name}, I'm interested in the ${it.destination} proposal.`)}` : '';
+
+  root.innerHTML = `
+    ${it.coverPhoto?`<img class="cover" src="${esc(it.coverPhoto)}" alt="" onerror="this.remove()">`:''}
+    <div class="head">
+      <div class="eyebrow">${esc(ag.name||'')} · Travel proposal</div>
+      <h1>${esc(it.name)}</h1>
+      <div class="sub">${esc(it.destination)} · ${n} nights / ${n+1} days · ${it.pax} travellers · ${fmtDate(it.startDate)} – ${fmtDate(it.endDate)}</div>
+      <div class="sub" style="margin-top:4px;">Prepared for ${esc(it.clientName)}</div>
+    </div>
+    <div class="body">
+      ${it.videoUrl?`<p style="font-size:13px;margin:0 0 16px;">▶ <a href="${esc(it.videoUrl)}" target="_blank">Watch the video itinerary</a></p>`:''}
+      ${(it.days||[]).map((d,i)=>`<div class="day">
+        ${d.photo?`<img src="${esc(d.photo)}" alt="" style="width:100%;height:210px;object-fit:cover;border-radius:10px;display:block;margin:0 0 10px;" onerror="this.remove()">`:''}
+        <div class="dl">Day ${i+1} · ${fmtDate(d.date)}</div>
+        <div class="dt">${esc(d.title||'—')}</div>
+        ${d.notes?`<div class="dn">${esc(d.notes)}</div>`:''}
+        ${d.distanceFromPrev?`<div class="dm">Travel: ${esc(d.distanceFromPrev)} · approx. ${esc(d.durationFromPrev||'')}</div>`:''}
+        <div class="dm">${d.hotel?`🏨 ${esc(d.hotel)}`:''}${d.hotel&&d.transport?' &nbsp;·&nbsp; ':''}${d.transport?`🚐 ${esc(d.transport)}`:''}</div>
+      </div>`).join('')}
+
+      ${opts.length>=2 ? `<div class="dl" style="margin-top:8px;">Package options</div>
+        <table><thead><tr><th></th>${opts.map(o=>`<th>${esc(o.label)}</th>`).join('')}</tr></thead><tbody>
+          ${[['hotelClass','Class'],['hotels','Hotels'],['roomType','Room'],['notes','Highlights']].map(([k,l])=>`<tr><td class="k">${l}</td>${opts.map(o=>`<td class="${differs(k)?'hi':''}">${esc(o[k]||'—')}</td>`).join('')}</tr>`).join('')}
+          <tr><td class="k">Price</td>${opts.map(o=>`<td style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:16px;">${money(o.sell)}</td>`).join('')}</tr>
+        </tbody></table>`
+        : `<div class="price"><span style="font-weight:600;">Package price (${it.pax} travellers)</span><b>${money(it.sellPrice)}</b></div>`}
+
+      <div class="cols">
+        <div><div class="dl">Inclusions</div><ul>${(it.inclusions||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+        <div><div class="dl">Exclusions</div><ul>${(it.exclusions||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+      </div>
+      ${it.terms?`<div class="terms">${esc(it.terms)}</div>`:''}
+      <div class="cta">
+        ${wa?`<a class="btn wa" href="${wa}" target="_blank">Chat on WhatsApp</a>`:''}
+        ${ag.phone?`<a class="btn call" href="tel:${esc(String(ag.phone).replace(/\s/g,''))}">Call ${esc(ag.name||'')}</a>`:''}
+      </div>
+    </div>`;
+  document.getElementById('foot').textContent = [ag.name, ag.ceo?`${ag.ceo}, CEO`:'', ag.email, ag.website].filter(Boolean).join(' · ');
+}
+main();
+</script>
+</body>
+</html>

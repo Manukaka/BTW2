@@ -1,0 +1,2898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyond Tourism World — Travel Ops CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        navy:'#12303D', navy2:'#1B4552', navy3:'#0C232D',
+        teal:'#1F7A6C', tealL:'#279685',
+        gold:'#C98A3D', goldL:'#E0A75E',
+        paper:'#F3F5F1', card:'#FFFFFF', ink:'#1A2229',
+        muted:'#6B7680', line:'#E1E4DF',
+        danger:'#B8483D', success:'#2F8F5B',
+      },
+      fontFamily: {
+        display:['Fraunces','serif'],
+        body:['"Public Sans"','sans-serif'],
+        mono:['"JetBrains Mono"','monospace'],
+      },
+      boxShadow: {
+        card:'0 1px 2px rgba(18,48,61,0.06), 0 1px 8px rgba(18,48,61,0.05)',
+        pop:'0 12px 32px rgba(12,35,45,0.24)',
+      }
+    }
+  }
+}
+</script>
+<style>
+  html,body{height:100%;}
+  body{font-family:'Public Sans',sans-serif; background:#F3F5F1;}
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#C7CCC3;border-radius:6px;}
+  ::-webkit-scrollbar-thumb:hover{background:#A9B0A2;}
+
+  .board-label{font-family:'JetBrains Mono',monospace; letter-spacing:.14em; text-transform:uppercase;}
+  .gate-badge{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px;
+    width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,0.08); color:#E0A75E; flex-shrink:0;}
+  .nav-item.active .gate-badge{ background:#C98A3D; color:#12303D; }
+  .nav-item.active{ background:rgba(255,255,255,0.06); }
+  .nav-item:hover{ background:rgba(255,255,255,0.05); }
+
+  .ticket{ position:relative; background:#fff; border-radius:14px;
+    box-shadow:0 1px 2px rgba(18,48,61,.06), 0 1px 8px rgba(18,48,61,.05); overflow:hidden;}
+  .stub-divider{ position:relative; border-top:2px dashed #D8DBD3; margin:0 -1px; }
+  .stub-divider::before, .stub-divider::after{ content:''; position:absolute; top:-9px; width:18px; height:18px;
+    border-radius:50%; background:#F3F5F1; z-index:2; }
+  .stub-divider::before{ left:-9px; } .stub-divider::after{ right:-9px; }
+
+  .route-line{ position:relative; height:2px; flex:1; margin:0 8px;
+    background:repeating-linear-gradient(to right,#C98A3D 0 6px, transparent 6px 11px); }
+  .route-dot{ width:7px;height:7px;border-radius:50%;background:#1F7A6C; flex-shrink:0; }
+
+  .kanban-col{ min-width:270px; max-width:270px; }
+  .kanban-card[draggable="true"]{ cursor:grab; }
+  .kanban-card.dragging{ opacity:.4; }
+  .kanban-col.drag-over{ background:rgba(31,122,108,0.08); border-radius:12px; }
+
+  .modal-overlay{ background:rgba(12,35,45,0.5); backdrop-filter: blur(2px); }
+  .modal-panel{ box-shadow:0 12px 32px rgba(12,35,45,0.24); }
+
+  input[type=text],input[type=number],input[type=date],input[type=email],input[type=tel],
+  input[type=password],input[type=url],select,textarea{
+    border:1px solid #E1E4DF; border-radius:8px; padding:8px 10px; font-size:14px; width:100%;
+    background:#fff; color:#1A2229;}
+  input:focus,select:focus,textarea:focus{ outline:2px solid #1F7A6C; outline-offset:1px; border-color:#1F7A6C; }
+  label.field-label{ font-size:12px; font-weight:600; color:#6B7680; text-transform:uppercase;
+    letter-spacing:.04em; margin-bottom:4px; display:block; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; font-weight:600; font-size:14px;
+    border-radius:8px; padding:8px 14px; transition:.15s; cursor:pointer; border:1px solid transparent; }
+  .btn-primary{ background:#1F7A6C; color:#fff; } .btn-primary:hover{ background:#186257; }
+  .btn-gold{ background:#C98A3D; color:#12303D; } .btn-gold:hover{ background:#B67A31; }
+  .btn-outline{ border-color:#D8DBD3; color:#12303D; background:#fff; } .btn-outline:hover{ background:#F3F5F1; }
+  .btn-ghost{ color:#6B7680; } .btn-ghost:hover{ background:#EEF0EB; color:#1A2229; }
+  .btn-danger{ background:#fff; color:#B8483D; border-color:#F0D3CE; } .btn-danger:hover{ background:#FBEDEB; }
+  .btn-wa{ background:#25D366; color:#0B3D22; } .btn-wa:hover{ background:#1EBE5A; }
+  .btn-sm{ padding:5px 10px; font-size:12.5px; border-radius:7px; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .pill{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px;
+    text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;}
+  .chip-btn{ font-size:12px; padding:4px 10px; border-radius:999px; border:1px solid #D8DBD3;
+    cursor:pointer; background:#fff;}
+  .chip-btn:hover{ background:#F3F5F1; }
+  .chip-btn.active{ background:#12303D; color:#fff; border-color:#12303D;}
+
+  #toast-root .toast{ animation: slideIn .2s ease-out; }
+  @keyframes slideIn{ from{ transform:translateY(8px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+
+  .palette-item.sel{ background:#F3F5F1; }
+
+  .sync-dot{ width:7px; height:7px; border-radius:50%; display:inline-block; }
+
+  @media print{
+    body *{ visibility:hidden; }
+    #print-area, #print-area *{ visibility:visible; }
+    #print-area{ position:absolute; top:0; left:0; width:100%; }
+    .no-print{ display:none !important; }
+  }
+  @media (max-width: 900px){
+    #sidebar{ position:fixed; z-index:30; height:100%; transform:translateX(-100%); transition:.2s; }
+    #sidebar.open{ transform:translateX(0); }
+    #menu-btn{ display:inline-flex !important; }
+  }
+</style>
+</head>
+<body class="text-ink">
+
+<!-- LOGIN GATE (only shown when team sync is switched on) -->
+<div id="auth-gate" class="hidden fixed inset-0 z-50 bg-navy flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl w-full max-w-sm p-6">
+    <div class="font-display text-xl font-semibold">Beyond Tourism World</div>
+    <div class="board-label text-[10px] text-gold mt-1 mb-5">Team sign in</div>
+    <div class="mb-3"><label class="field-label">Email</label><input type="email" id="auth-email" autocomplete="username"></div>
+    <div class="mb-4"><label class="field-label">Password</label><input type="password" id="auth-pass" autocomplete="current-password"></div>
+    <button class="btn btn-primary w-full justify-center" id="auth-signin-btn">Sign in</button>
+    <div id="auth-msg" class="text-xs text-danger mt-3 hidden"></div>
+    <button class="text-xs text-muted mt-4 underline" id="auth-offline-btn">Work offline on this device instead</button>
+  </div>
+</div>
+
+<div class="flex h-screen overflow-hidden">
+  <aside id="sidebar" class="w-60 shrink-0 bg-navy text-white flex flex-col justify-between no-print">
+    <div class="overflow-y-auto">
+      <div class="px-5 pt-6 pb-5 border-b border-white/10">
+        <div class="font-display text-lg font-semibold leading-tight text-white">Beyond Tourism<br>World</div>
+        <div class="board-label text-[10px] text-gold mt-1.5">Travel Ops · CRM</div>
+      </div>
+      <nav id="nav-list" class="px-3 py-4 flex flex-col gap-1"></nav>
+    </div>
+    <div class="px-5 py-4 border-t border-white/10">
+      <div class="flex items-center gap-2 mb-1">
+        <span id="sync-dot" class="sync-dot bg-white/30"></span>
+        <span id="sync-text" class="text-[10px] board-label text-white/50">This device only</span>
+      </div>
+      <div class="text-[11px] text-white/50 board-label mt-2">Chief Executive</div>
+      <div class="text-sm font-medium text-white/90 mt-0.5" id="ceo-name-tag">Gautam Pawar</div>
+    </div>
+  </aside>
+
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="h-16 shrink-0 bg-card border-b border-line flex items-center justify-between px-4 sm:px-6 gap-3 no-print">
+      <button id="menu-btn" class="btn btn-ghost btn-sm hidden" data-action="toggle-menu">☰</button>
+      <div class="min-w-0">
+        <div class="board-label text-[10px] text-muted" id="topbar-eyebrow">Overview</div>
+        <div class="font-display text-lg sm:text-xl font-semibold truncate" id="topbar-title">Dashboard</div>
+      </div>
+      <button class="flex-1 max-w-md hidden sm:flex items-center gap-2 border border-line rounded-lg px-3 py-2 text-sm text-muted hover:bg-paper" data-action="open-palette">
+        <span>⌕</span><span class="flex-1 text-left">Search anything…</span>
+        <span class="board-label text-[10px] border border-line rounded px-1.5 py-0.5">Ctrl K</span>
+      </button>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost btn-sm sm:hidden" data-action="open-palette">⌕</button>
+        <button class="btn btn-gold btn-sm whitespace-nowrap" data-action="new-lead">+ Lead</button>
+      </div>
+    </header>
+    <main id="main" class="flex-1 overflow-y-auto p-4 sm:p-6"><div id="view"></div></main>
+  </div>
+</div>
+
+<div id="palette-root"></div>
+<div id="modal-root"></div>
+<div id="toast-root" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 no-print"></div>
+<div id="print-area" class="hidden"></div>
+<div id="qr-scratch" style="position:absolute;left:-9999px;top:-9999px;"></div>
+
+<script>
+'use strict';
+/* =========================================================================
+   BEYOND TOURISM WORLD — TRAVEL OPS CRM  (v2)
+   Single-file app. Works standalone; optional Supabase backend adds team
+   login, multi-device sync and public inquiry-form capture.
+   ========================================================================= */
+
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const el = (h) => { const t=document.createElement('template'); t.innerHTML=h.trim(); return t.content.firstElementChild; };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+function fmtMoney(n){ n=Number(n)||0; return (STATE?.settings?.currency||'₹') + n.toLocaleString('en-IN',{maximumFractionDigits:0}); }
+function fmtDate(d){ if(!d) return '—'; const dt=new Date(String(d).length===10?d+'T00:00:00':d);
+  return isNaN(dt)?d:dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDateShort(d){ if(!d) return '—'; const dt=new Date(String(d).length===10?d+'T00:00:00':d);
+  return isNaN(dt)?d:dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function addDays(s,n){ const d=new Date(s+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function nightsBetween(a,b){ if(!a||!b) return 0;
+  return Math.max(0, Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000)); }
+
+function toast(msg, kind='ok'){
+  const c={ok:'bg-navy text-white',err:'bg-danger text-white',warn:'bg-gold text-navy'};
+  const t=el(`<div class="toast ${c[kind]} shadow-pop rounded-lg px-4 py-2.5 text-sm font-medium max-w-xs">${esc(msg)}</div>`);
+  $('#toast-root').appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); },2600);
+}
+
+// =========================================================================
+// CONSTANTS
+// =========================================================================
+const LANGUAGES = ['English','Hindi','Marathi','Gujarati','Bengali','Tamil','Telugu','Kannada',
+  'Malayalam','Punjabi','French','German','Spanish','Arabic'];
+
+const TRAVELLER_TYPES = ['Family','Couple / Honeymoon','Friends group','Solo','Senior citizens','Corporate group','School / College group'];
+const TRAVEL_PACE = ['Relaxed','Balanced','Packed'];
+const BUDGET_LEVELS = ['Budget','Mid-range','Luxury','Premium Luxury'];
+
+const LEAD_STAGES = [
+  {key:'New', label:'New', color:'#1F7A6C'},
+  {key:'Contacted', label:'Contacted', color:'#C98A3D'},
+  {key:'Proposal Sent', label:'Proposal Sent', color:'#12303D'},
+  {key:'Negotiation', label:'Negotiation', color:'#7A5CA8'},
+  {key:'Won', label:'Won', color:'#2F8F5B'},
+  {key:'Lost', label:'Lost', color:'#B8483D'},
+];
+const LEAD_SOURCES = ['WhatsApp','Website Form','Instagram','Facebook','Referral','Google Ads','Walk-in','B2B Marketplace','Corporate','Other'];
+const ITIN_STATUSES = ['Draft','Sent to Client','Confirmed','Completed','Cancelled'];
+const BOOKING_STATUSES = ['Confirmed','Ongoing','Completed','Cancelled'];
+const ACTIVITY_TYPES = ['Call (outgoing)','Call (incoming)','Call (missed)','WhatsApp','Email','Meeting','Note'];
+
+const INVOICE_TYPES = [
+  {value:'Package Tour', label:'Package Tour (5% GST)'},
+  {value:'Service Fee', label:'Service Fee (18% GST)'},
+  {value:'Visa Assistance', label:'Visa Assistance (18% GST)'},
+  {value:'Hotel Only', label:'Hotel Only (18% GST)'},
+  {value:'Other', label:'Other'},
+];
+function defaultGstFor(t){ return t==='Package Tour' ? 5 : (t==='Other' ? 0 : 18); }
+
+const VISA_STAGES = [
+  {key:'Document Collected', label:'Docs Collected', color:'#6B7680'},
+  {key:'Under Process', label:'Under Process', color:'#C98A3D'},
+  {key:'Approved', label:'Approved', color:'#2F8F5B'},
+  {key:'Rejected', label:'Rejected', color:'#B8483D'},
+  {key:'Delivered', label:'Delivered', color:'#1F7A6C'},
+];
+
+// Country-wise visa document checklists. Editable per case after creation.
+const VISA_CHECKLISTS = {
+  'Schengen (Europe)': ['Passport (6 months validity)','Photographs (35x45mm, white bg)','Visa application form','Bank statement (6 months)','ITR (3 years)','Confirmed flight booking','Hotel bookings','Travel insurance (€30,000)','Cover letter','Employment / leave letter'],
+  'UAE / Dubai': ['Passport first & last page','Photograph (white bg)','Confirmed flight ticket','Hotel booking','PAN card copy'],
+  'Vietnam': ['Passport scan (6 months validity)','Photograph (4x6, white bg)','e-Visa application form','Confirmed flight itinerary','Hotel booking'],
+  'Thailand': ['Passport (6 months validity)','Photograph (35x45mm)','Bank statement (6 months)','Confirmed return ticket','Hotel booking'],
+  'Singapore': ['Passport (6 months validity)','Photograph (35x45mm, white bg)','Form 14A','Bank statement (3 months)','Covering letter','Confirmed air ticket'],
+  'Malaysia': ['Passport (6 months validity)','Photograph','Confirmed return ticket','Hotel booking','Bank statement'],
+  'Sri Lanka': ['Passport (6 months validity)','ETA application','Return ticket','Hotel booking'],
+  'United Kingdom': ['Passport','Photograph','Online application','Bank statement (6 months)','ITR (3 years)','Employment letter','Accommodation details','Travel itinerary'],
+  'USA': ['Passport','DS-160 confirmation','Photograph (2x2 inch)','Visa fee receipt','Interview appointment letter','Bank statement','ITR (3 years)','Employment proof'],
+  'Australia': ['Passport','Photograph','Application form','Bank statement (6 months)','ITR','Employment letter','Travel itinerary'],
+  'Japan': ['Passport','Photograph (45x45mm)','Application form','Bank statement','ITR','Daily schedule','Confirmed flight booking'],
+  'Other / Custom': ['Passport','Photograph','Application form','Bank statement','Confirmed flight booking','Hotel booking'],
+};
+
+const DEFAULT_INCLUSIONS = [
+  'Accommodation on twin-sharing basis',
+  'Daily breakfast at the hotel',
+  'All transfers and sightseeing by private vehicle',
+  'All applicable toll, parking and driver allowance',
+  'Assistance on arrival',
+];
+const DEFAULT_EXCLUSIONS = [
+  'Airfare and visa fees unless specified',
+  'Travel insurance',
+  'Lunch, dinner and personal expenses',
+  'Entry tickets to monuments unless specified',
+  'Anything not mentioned under inclusions',
+];
+const DEFAULT_TERMS =
+`Booking confirmed only against advance payment. Rates are subject to availability at the time of confirmation. Cancellation charges apply as per hotel and supplier policy. Government taxes are payable extra where applicable.`;
+
+// ---------- WhatsApp & Maps link builders (no API key needed) ----------
+function waNumber(raw){ return String(raw||'').replace(/[^\d]/g,''); }
+function waLink(phone, text){
+  const n = waNumber(phone);
+  return `https://wa.me/${n}?text=${encodeURIComponent(text||'')}`;
+}
+function openWhatsApp(phone, text){
+  const n = waNumber(phone);
+  if(!n){ toast('No phone number on file for this contact','warn'); return; }
+  window.open(waLink(phone,text), '_blank');
+}
+function mapsSearchLink(query){
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query||'')}`;
+}
+function mapsDirectionsLink(from, to){
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(from||'')}&destination=${encodeURIComponent(to||'')}`;
+}
+
+// =========================================================================
+// STATE + PERSISTENCE (local always; Supabase optional for team sync)
+// =========================================================================
+let STATE = null;
+const STORAGE_KEY = 'btw_crm_state_v2';
+const CONFIG_KEY  = 'btw_crm_config_v2';   // integration keys, kept per-device
+const INSIDE_CLAUDE_ARTIFACT = (typeof window.storage !== 'undefined');
+
+let CONFIG = { supabaseUrl:'', supabaseAnonKey:'', backendUrl:'', mapsApiKey:'' };
+let SB = null;              // supabase client when configured
+let SESSION = null;         // supabase auth session
+let SYNC = 'local';         // 'local' | 'online' | 'offline-forced'
+let saveTimer = null;
+
+const Local = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+};
+
+async function persistGet(key){
+  if(INSIDE_CLAUDE_ARTIFACT){
+    try{ const r = await window.storage.get(key,false); if(r && r.value) return r.value; }catch(e){}
+  }
+  return Local.get(key);
+}
+async function persistSet(key,val){
+  if(INSIDE_CLAUDE_ARTIFACT){
+    try{ await window.storage.set(key,val,false); return true; }catch(e){}
+  }
+  return Local.set(key,val);
+}
+
+function defaultState(){
+  return {
+    settings: {
+      agencyName:'Beyond Tourism World',
+      ceoName:'Gautam Pawar',
+      agencyPhone:'', agencyEmail:'', agencyAddress:'', website:'',
+      gstNumber:'', currency:'₹',
+      invoicePrefix:'BTW-INV', receiptPrefix:'BTW-RCPT', financialYear:'25-26',
+      googleReviewUrl:'',
+      logoUrl:'',
+      team:[{id:uid(), name:'Gautam Pawar', role:'CEO'}],
+    },
+    leads:[], itineraries:[], bookings:[], invoices:[], payments:[],
+    tasks:[], vendors:[], visaCases:[], companies:[], feedback:[],
+    counters:{ invoice:0, receipt:0 },
+  };
+}
+
+function backfillState(){
+  const d = defaultState();
+  for(const k in d){ if(!(k in STATE)) STATE[k] = d[k]; }
+  for(const k in d.settings){ if(!(k in STATE.settings)) STATE.settings[k] = d.settings[k]; }
+  for(const k in d.counters){ if(!(k in STATE.counters)) STATE.counters[k] = d.counters[k]; }
+  // per-record backfills so older saves keep working
+  STATE.leads.forEach(l => { l.activity = l.activity || []; l.assignedTo = l.assignedTo || ''; });
+  STATE.itineraries.forEach(i => {
+    i.language = i.language || 'English';
+    i.inclusions = i.inclusions || DEFAULT_INCLUSIONS.slice();
+    i.exclusions = i.exclusions || DEFAULT_EXCLUSIONS.slice();
+    i.terms = i.terms ?? DEFAULT_TERMS;
+    i.options = i.options || [];
+    i.coverPhoto = i.coverPhoto || '';
+    i.videoUrl = i.videoUrl || '';
+    (i.days||[]).forEach(d=>{ d.photo = d.photo || ''; });
+  });
+}
+
+function nextInvoiceNo(){
+  STATE.counters.invoice += 1;
+  return `${STATE.settings.invoicePrefix}/${STATE.settings.financialYear}/${String(STATE.counters.invoice).padStart(3,'0')}`;
+}
+function nextReceiptNo(){
+  STATE.counters.receipt += 1;
+  return `${STATE.settings.receiptPrefix}/${STATE.settings.financialYear}/${String(STATE.counters.receipt).padStart(3,'0')}`;
+}
+
+// ---------- Supabase layer ----------
+function sbReady(){ return !!(SB && SESSION); }
+
+function initSupabaseClient(){
+  if(!CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey) { SB = null; return false; }
+  if(typeof window.supabase === 'undefined'){ console.warn('supabase-js not loaded'); return false; }
+  try{
+    SB = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey);
+    return true;
+  }catch(err){ console.error('supabase init failed', err); SB = null; return false; }
+}
+
+async function sbLoadState(){
+  const { data, error } = await SB.from('crm_state').select('data').eq('id', 1).maybeSingle();
+  if(error) throw error;
+  return data ? data.data : null;
+}
+async function sbSaveState(){
+  const { error } = await SB.from('crm_state').upsert({ id:1, data:STATE, updated_at:new Date().toISOString() });
+  if(error) throw error;
+}
+async function sbFetchInquiries(){
+  const { data, error } = await SB.from('inquiries').select('*').eq('imported', false).order('created_at',{ascending:false});
+  if(error) throw error;
+  return data || [];
+}
+async function sbMarkInquiryImported(id){
+  await SB.from('inquiries').update({ imported:true }).eq('id', id);
+}
+
+function setSyncBadge(){
+  const dot = $('#sync-dot'), txt = $('#sync-text');
+  if(!dot) return;
+  if(SYNC === 'online'){ dot.className='sync-dot bg-success'; txt.textContent = 'Team sync on'; }
+  else if(SYNC === 'offline-forced'){ dot.className='sync-dot bg-gold'; txt.textContent = 'Offline — not syncing'; }
+  else { dot.className='sync-dot bg-white/30'; txt.textContent = 'This device only'; }
+}
+
+// ---------- Backend function (Supabase Edge Function) ----------
+function backendReady(){ return !!(CONFIG.backendUrl && sbReady()); }
+async function callBackend(task, payload){
+  if(!backendReady()) throw new Error('Backend not connected');
+  const resp = await fetch(CONFIG.backendUrl, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'apikey':CONFIG.supabaseAnonKey,
+              'Authorization':'Bearer '+SESSION.access_token },
+    body: JSON.stringify({ task, payload })
+  });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok || data.error) throw new Error(data.error || ('Backend error '+resp.status));
+  return data;
+}
+function publicBase(){ return location.origin + location.pathname.replace(/[^/]*$/,''); }
+function fileToBase64(file){
+  return new Promise((res,rej)=>{ const r=new FileReader();
+    r.onload=()=>res(String(r.result).split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
+}
+function pickImage(){
+  return new Promise(res=>{
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+    inp.onchange=()=>res(inp.files[0]||null); inp.click();
+  });
+}
+
+async function saveState(){
+  await persistSet(STORAGE_KEY, JSON.stringify(STATE));
+  if(SYNC === 'online'){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async ()=>{
+      try{ await sbSaveState(); }
+      catch(err){ console.error(err); toast('Cloud save failed — saved on this device','warn'); }
+    }, 900);
+  }
+}
+
+async function loadLocalState(){
+  const raw = await persistGet(STORAGE_KEY);
+  if(raw){ try{ STATE = JSON.parse(raw); backfillState(); return true; }catch(e){} }
+  return false;
+}
+
+// ---------- demo seed (first run only) ----------
+function seedDemoData(){
+  const team = STATE.settings.team;
+  team.push({id:uid(), name:'Sana Shaikh', role:'Operations'});
+  team.push({id:uid(), name:'Amit Patil', role:'Sales'});
+  const gautam = team[0].name, sana = team[1].name, amit = team[2].name;
+
+  const L=(o)=>{ const id=uid(); STATE.leads.push({id, stage:'New', source:'WhatsApp', notes:'', pax:2,
+    createdAt:todayISO(), assignedTo:gautam, budget:'Mid-range', travellerType:'Family', activity:[], ...o}); return id; };
+
+  const l1=L({name:'Rohan Mehta', phone:'+91 98200 11234', email:'rohan.mehta@example.com', destination:'Bali, Indonesia',
+    travelDate:addDays(todayISO(),40), pax:2, stage:'Proposal Sent', source:'Instagram', assignedTo:amit,
+    travellerType:'Couple / Honeymoon', budget:'Luxury',
+    activity:[{id:uid(), type:'Call (outgoing)', text:'Discussed Bali vs Maldives. Prefers Bali, 6 nights.', date:addDays(todayISO(),-3), by:amit}]});
+  const l2=L({name:'Priya & Arjun Shah', phone:'+91 90040 55621', email:'priya.shah@example.com', destination:'Switzerland',
+    travelDate:addDays(todayISO(),70), pax:2, stage:'Contacted', source:'Referral', assignedTo:gautam});
+  const l3=L({name:'Karan Desai', phone:'+91 88888 22110', email:'karan.d@example.com', destination:'Vietnam',
+    travelDate:addDays(todayISO(),20), pax:4, stage:'Won', source:'Website Form', assignedTo:sana});
+  L({name:'Neha Kulkarni', phone:'+91 77000 34521', email:'neha.k@example.com', destination:'Maldives',
+    travelDate:addDays(todayISO(),90), pax:2, stage:'New', source:'WhatsApp', assignedTo:amit, travellerType:'Couple / Honeymoon'});
+  L({name:'The Iyer Family', phone:'+91 99870 12233', email:'iyerfam@example.com', destination:'Kerala Backwaters',
+    travelDate:addDays(todayISO(),15), pax:5, stage:'Lost', source:'Google Ads', assignedTo:gautam,
+    notes:'Went with a competitor on price.'});
+
+  const it1=uid();
+  STATE.itineraries.push({
+    id:it1, name:'Vietnam Explorer — Desai Family', destination:'Vietnam', clientName:'Karan Desai', leadId:l3,
+    startDate:addDays(todayISO(),20), endDate:addDays(todayISO(),27), pax:4, status:'Confirmed',
+    language:'English', travellerType:'Family', travelPace:'Balanced',
+    coverPhoto:'', videoUrl:'', costPrice:168000, sellPrice:224000,
+    inclusions:DEFAULT_INCLUSIONS.slice(), exclusions:DEFAULT_EXCLUSIONS.slice(), terms:DEFAULT_TERMS,
+    options:[
+      {id:uid(), label:'Budget', hotelClass:'3-star', hotels:'Hanoi Old Quarter Hotel, Da Nang City Hotel', roomType:'Standard Room', cost:132000, sell:176000, notes:'Group transfers'},
+      {id:uid(), label:'Mid-range', hotelClass:'4-star', hotels:'Hanoi La Siesta, Da Nang Beach Resort', roomType:'Deluxe Room', cost:168000, sell:224000, notes:'Private transfers throughout'},
+      {id:uid(), label:'Luxury', hotelClass:'5-star', hotels:'Sofitel Legend Metropole, InterContinental Danang', roomType:'Premium Sea View', cost:246000, sell:328000, notes:'Private guide + airport lounge'},
+    ],
+    days:[
+      {id:uid(), date:addDays(todayISO(),20), title:'Arrival in Hanoi', hotel:'Hanoi La Siesta Hotel', transport:'Airport pickup by private car', notes:'Evening stroll around Hoan Kiem Lake.'},
+      {id:uid(), date:addDays(todayISO(),21), title:'Hanoi city & Old Quarter', hotel:'Hanoi La Siesta Hotel', transport:'Private car + walking tour', notes:'Temple of Literature, water puppet show.'},
+      {id:uid(), date:addDays(todayISO(),22), title:'Halong Bay cruise begins', hotel:'Overnight cruise cabin', transport:'Coach to Halong Bay + boat', notes:'Kayaking and cave visit.'},
+      {id:uid(), date:addDays(todayISO(),23), title:'Halong Bay → fly to Da Nang', hotel:'Da Nang Beach Resort', transport:'Domestic flight HAN–DAD', notes:''},
+      {id:uid(), date:addDays(todayISO(),24), title:'Hoi An ancient town', hotel:'Da Nang Beach Resort', transport:'Private car', notes:'Lantern-making workshop in the evening.'},
+    ],
+  });
+  const it2=uid();
+  STATE.itineraries.push({
+    id:it2, name:'Bali Honeymoon — Mehta', destination:'Bali, Indonesia', clientName:'Rohan Mehta', leadId:l1,
+    startDate:addDays(todayISO(),40), endDate:addDays(todayISO(),46), pax:2, status:'Draft',
+    language:'English', travellerType:'Couple / Honeymoon', travelPace:'Relaxed',
+    coverPhoto:'', videoUrl:'', costPrice:92000, sellPrice:128000,
+    inclusions:DEFAULT_INCLUSIONS.slice(), exclusions:DEFAULT_EXCLUSIONS.slice(), terms:DEFAULT_TERMS, options:[],
+    days:[
+      {id:uid(), date:addDays(todayISO(),40), title:'Arrival, Seminyak', hotel:'The Seminyak Beach Resort', transport:'Airport transfer', notes:''},
+      {id:uid(), date:addDays(todayISO(),41), title:'Uluwatu Temple & sunset', hotel:'The Seminyak Beach Resort', transport:'Private car', notes:'Kecak fire dance at sunset.'},
+    ],
+  });
+
+  const bk1=uid();
+  STATE.bookings.push({id:bk1, itineraryId:it1, clientName:'Karan Desai', destination:'Vietnam',
+    startDate:addDays(todayISO(),20), endDate:addDays(todayISO(),27), pax:4, status:'Confirmed',
+    costPrice:168000, sellPrice:224000, handledBy:sana, companyId:null});
+
+  const inv1=uid(), base1=224000, gst1=5;
+  STATE.invoices.push({id:inv1, invoiceNo:nextInvoiceNo(), bookingId:bk1, clientName:'Karan Desai', type:'Package Tour',
+    amount:base1, gstRate:gst1, gstAmount:Math.round(base1*gst1/100), total:Math.round(base1*(1+gst1/100)), date:todayISO()});
+  STATE.payments.push({id:uid(), receiptNo:nextReceiptNo(), invoiceId:inv1, clientName:'Karan Desai',
+    amount:100000, mode:'UPI', date:addDays(todayISO(),-2), reference:''});
+
+  STATE.tasks.push(
+    {id:uid(), title:'Send Vietnam visa checklist to Desai family', assignee:sana, dueDate:addDays(todayISO(),1), relatedTo:'Karan Desai', done:false},
+    {id:uid(), title:'Follow up on Switzerland proposal', assignee:gautam, dueDate:todayISO(), relatedTo:'Priya & Arjun Shah', done:false},
+    {id:uid(), title:'Confirm Halong Bay cruise cabin upgrade', assignee:sana, dueDate:addDays(todayISO(),-1), relatedTo:'Karan Desai', done:false},
+    {id:uid(), title:'Share Bali hotel options with Rohan', assignee:amit, dueDate:addDays(todayISO(),3), relatedTo:'Rohan Mehta', done:true},
+  );
+
+  STATE.vendors.push(
+    {id:uid(), name:'Hanoi La Siesta Hotel', category:'Hotel', contact:'Ms. Linh', phone:'+84 24 3928 1234', email:'reservations@lasiestahotels.com', city:'Hanoi, Vietnam', notes:'Good group rates, Oct–Mar.'},
+    {id:uid(), name:'Halong Premium Cruises', category:'DMC', contact:'Mr. Tuan', phone:'+84 90 123 4567', email:'sales@halongpremium.vn', city:'Halong, Vietnam', notes:''},
+    {id:uid(), name:'Zen Cars Pvt Ltd', category:'Transport', contact:'Dispatch Desk', phone:'+91 90000 11122', email:'dispatch@zencars.in', city:'Mumbai, India', notes:'Local airport transfers.'},
+  );
+
+  STATE.visaCases.push(
+    {id:uid(), clientName:'Karan Desai', phone:'+91 88888 22110', country:'Vietnam', visaType:'e-Visa (Tourist)',
+     stage:'Under Process', appliedOn:addDays(todayISO(),-5), docs:VISA_CHECKLISTS['Vietnam'].map((d,i)=>({label:d, done:i<4})), notes:''},
+    {id:uid(), clientName:'Priya & Arjun Shah', phone:'+91 90040 55621', country:'Schengen (Europe)', visaType:'Tourist Visa',
+     stage:'Document Collected', appliedOn:'', docs:VISA_CHECKLISTS['Schengen (Europe)'].map((d,i)=>({label:d, done:i<3})), notes:'Awaiting bank statement.'},
+  );
+
+  STATE.companies.push({id:uid(), name:'Suryodaya Infotech Pvt Ltd', gstNumber:'27AABCS1234K1Z2',
+    contactPerson:'Ms. Rupali Jadhav', phone:'+91 90210 44556', email:'travel@suryodaya.example', address:'Baner, Pune',
+    employees:[
+      {id:uid(), name:'Vikram Rao', designation:'Sales Head', phone:'+91 90210 11111', email:'vikram@suryodaya.example'},
+      {id:uid(), name:'Anita Deshmukh', designation:'Project Manager', phone:'+91 90210 22222', email:'anita@suryodaya.example'},
+    ]});
+
+  STATE.feedback.push({id:uid(), clientName:'Karan Desai', bookingId:bk1, rating:5,
+    comment:'Excellent planning, driver was on time every day.', date:addDays(todayISO(),-1)});
+}
+
+// =========================================================================
+// UI COMPONENTS — modal, form builder, table, kanban, command palette
+// =========================================================================
+function closeModal(){ $('#modal-root').innerHTML = ''; }
+
+function openModal({title, bodyHTML, footHTML, onMount, wide=false, xwide=false}){
+  const w = xwide ? 'max-w-4xl' : (wide ? 'max-w-2xl' : 'max-w-md');
+  $('#modal-root').innerHTML = `
+    <div class="modal-overlay fixed inset-0 z-40 flex items-center justify-center p-4" data-action="modal-overlay">
+      <div class="modal-panel bg-white rounded-2xl w-full ${w} max-h-[88vh] flex flex-col" data-stop>
+        <div class="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+          <h3 class="font-display text-lg font-semibold">${title}</h3>
+          <button class="btn btn-ghost btn-sm" data-action="modal-close">✕</button>
+        </div>
+        <div class="px-5 py-4 overflow-y-auto">${bodyHTML}</div>
+        ${footHTML ? `<div class="px-5 py-4 border-t border-line shrink-0">${footHTML}</div>` : ''}
+      </div>
+    </div>`;
+  $('[data-action="modal-overlay"]').addEventListener('click', e => { if(!e.target.closest('[data-stop]')) closeModal(); });
+  if(onMount) onMount();
+}
+
+function fieldHTML(f){
+  const req = f.required ? 'required' : '';
+  const val = f.value ?? '';
+  const wrap = inner => `<div class="${f.full?'sm:col-span-2':''} mb-3"><label class="field-label">${esc(f.label)}${f.required?' *':''}</label>${inner}${f.hint?`<div class="text-[11px] text-muted mt-1">${esc(f.hint)}</div>`:''}</div>`;
+  if(f.type==='select'){
+    return wrap(`<select name="${f.name}" ${req}>${f.options.map(o=>{
+      const ov = typeof o==='object'?o.value:o, ol = typeof o==='object'?o.label:o;
+      return `<option value="${esc(ov)}" ${String(val)===String(ov)?'selected':''}>${esc(ol)}</option>`;
+    }).join('')}</select>`);
+  }
+  if(f.type==='textarea') return wrap(`<textarea name="${f.name}" rows="${f.rows||3}" placeholder="${esc(f.placeholder||'')}" ${req}>${esc(val)}</textarea>`);
+  if(f.type==='checkbox') return `<div class="${f.full?'sm:col-span-2':''} mb-3 flex items-center gap-2 pt-5"><input type="checkbox" name="${f.name}" id="fld-${f.name}" ${val?'checked':''} class="w-4 h-4"><label for="fld-${f.name}" class="text-sm font-medium">${esc(f.label)}</label></div>`;
+  return wrap(`<input type="${f.type||'text'}" name="${f.name}" value="${esc(val)}" placeholder="${esc(f.placeholder||'')}" ${f.step?`step="${f.step}"`:''} ${req}>`);
+}
+
+function openFormModal({title, fields, onSubmit, submitLabel='Save', wide=false, extraFootLeft='', onMount}){
+  fields = fields.filter(Boolean);
+  openModal({
+    title, wide,
+    bodyHTML:`<form id="generic-form" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">${fields.map(fieldHTML).join('')}</form>`,
+    footHTML:`<div class="flex items-center justify-between gap-2">
+        <div>${extraFootLeft}</div>
+        <div class="flex gap-2">
+          <button type="button" class="btn btn-outline" data-action="modal-close">Cancel</button>
+          <button type="submit" form="generic-form" class="btn btn-primary">${submitLabel}</button>
+        </div></div>`,
+    onMount: () => {
+      $('#generic-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const fd = new FormData(e.target), out = {};
+        fields.forEach(f => {
+          if(f.type==='checkbox') out[f.name] = fd.get(f.name)==='on';
+          else if(f.type==='number') out[f.name] = fd.get(f.name)==='' ? null : Number(fd.get(f.name));
+          else out[f.name] = fd.get(f.name) ?? '';
+        });
+        onSubmit(out);
+      });
+      if(onMount) onMount();
+    }
+  });
+}
+
+function confirmDialog(message, onYes){
+  openModal({
+    title:'Please confirm',
+    bodyHTML:`<p class="text-sm">${esc(message)}</p>`,
+    footHTML:`<div class="flex justify-end gap-2">
+        <button class="btn btn-outline" data-action="modal-close">Cancel</button>
+        <button class="btn btn-danger" id="confirm-yes-btn">Yes, continue</button></div>`,
+    onMount: () => $('#confirm-yes-btn').addEventListener('click', ()=>{ closeModal(); onYes(); })
+  });
+}
+
+function renderTable({columns, rows, emptyText='Nothing here yet.'}){
+  if(!rows.length) return `<div class="text-center py-14 text-muted text-sm border border-dashed border-line rounded-xl">${esc(emptyText)}</div>`;
+  return `<div class="ticket overflow-x-auto"><table class="w-full text-sm min-w-[640px]">
+      <thead><tr class="text-left board-label text-[10.5px] text-muted border-b border-line">
+        ${columns.map(c=>`<th class="px-4 py-3 font-semibold">${esc(c.label)}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r=>`<tr class="border-b border-line last:border-0 hover:bg-paper/70">
+        ${columns.map(c=>`<td class="px-4 py-3 align-middle">${c.render?c.render(r):esc(r[c.key] ?? '—')}</td>`).join('')}
+      </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderKanban({stages, items, stageKey='stage', renderCard}){
+  return `<div class="flex gap-4 overflow-x-auto pb-2">${stages.map(s=>{
+    const inStage = items.filter(i=>i[stageKey]===s.key);
+    return `<div class="kanban-col flex flex-col">
+      <div class="flex items-center justify-between mb-2 px-1">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full" style="background:${s.color}"></span>
+          <span class="board-label text-[11px] text-navy font-semibold">${esc(s.label)}</span>
+        </div>
+        <span class="text-[11px] text-muted font-mono">${inStage.length}</span>
+      </div>
+      <div class="flex flex-col gap-2.5 min-h-[60px] p-1 rounded-xl" data-drop-zone="${esc(s.key)}">
+        ${inStage.map(i=>renderCard(i)).join('') || `<div class="text-[12px] text-muted italic px-2 py-3">No items</div>`}
+      </div></div>`;
+  }).join('')}</div>`;
+}
+
+function wireKanbanDnD(container, moveAction){
+  container.querySelectorAll('.kanban-card').forEach(c=>{
+    c.addEventListener('dragstart', ()=>c.classList.add('dragging'));
+    c.addEventListener('dragend', ()=>c.classList.remove('dragging'));
+  });
+  container.querySelectorAll('[data-drop-zone]').forEach(z=>{
+    z.addEventListener('dragover', e=>{ e.preventDefault(); z.parentElement.classList.add('drag-over'); });
+    z.addEventListener('dragleave', ()=>z.parentElement.classList.remove('drag-over'));
+    z.addEventListener('drop', e=>{
+      e.preventDefault(); z.parentElement.classList.remove('drag-over');
+      const d = container.querySelector('.dragging'); if(!d) return;
+      moveAction(d.dataset.id, z.dataset.dropZone);
+    });
+  });
+}
+
+function printHTML(inner){
+  const a = $('#print-area');
+  a.innerHTML = inner;
+  a.classList.remove('hidden');
+  setTimeout(()=>window.print(), 60);
+}
+
+// QR code as a data URL, using qrcodejs into an offscreen node
+function qrDataUrl(text, size=140){
+  return new Promise(resolve=>{
+    const holder = $('#qr-scratch');
+    holder.innerHTML = '';
+    try{
+      new QRCode(holder, { text: text || ' ', width:size, height:size, correctLevel: QRCode.CorrectLevel.M });
+      setTimeout(()=>{
+        const cvs = holder.querySelector('canvas');
+        const img = holder.querySelector('img');
+        if(cvs) return resolve(cvs.toDataURL('image/png'));
+        if(img && img.src) return resolve(img.src);
+        resolve('');
+      }, 120);
+    }catch(err){ console.error('QR failed', err); resolve(''); }
+  });
+}
+
+// =========================================================================
+// ROUTER + NAV
+// =========================================================================
+const NAV = [
+  {key:'dashboard',   label:'Dashboard',    gate:'DB', eyebrow:'Overview'},
+  {key:'leads',       label:'Leads',        gate:'LD', eyebrow:'Pipeline'},
+  {key:'itineraries', label:'Itineraries',  gate:'IT', eyebrow:'Trip planning'},
+  {key:'bookings',    label:'Bookings',     gate:'BK', eyebrow:'Operations'},
+  {key:'invoices',    label:'Payments',     gate:'PY', eyebrow:'Invoices & payments'},
+  {key:'visa',        label:'Visa Tracker', gate:'VS', eyebrow:'Documentation'},
+  {key:'corporate',   label:'Corporate',    gate:'CO', eyebrow:'Company accounts'},
+  {key:'tasks',       label:'Tasks',        gate:'TK', eyebrow:'Team follow-ups'},
+  {key:'vendors',     label:'Vendors',      gate:'VN', eyebrow:'Supplier directory'},
+  {key:'clients',     label:'Clients',      gate:'CL', eyebrow:'Client book'},
+  {key:'feedback',    label:'Feedback',     gate:'FB', eyebrow:'Post-trip reviews'},
+  {key:'settings',    label:'Settings',     gate:'ST', eyebrow:'Agency setup'},
+];
+
+let ROUTE = {view:'dashboard', id:null};
+const VIEWS = {};
+
+function navigate(view, id=null){ location.hash = id ? `${view}/${id}` : view; }
+
+function renderSidebar(){
+  $('#nav-list').innerHTML = NAV.map(n=>`
+    <button class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/85 text-left w-full ${ROUTE.view===n.key?'active':''}"
+      data-action="nav" data-view="${n.key}">
+      <span class="gate-badge">${n.gate}</span><span class="font-medium">${n.label}</span></button>`).join('');
+  $('#ceo-name-tag').textContent = STATE.settings.ceoName;
+  setSyncBadge();
+}
+function renderTopbar(){
+  const n = NAV.find(x=>x.key===ROUTE.view) || NAV[0];
+  $('#topbar-eyebrow').textContent = n.eyebrow;
+  $('#topbar-title').textContent = n.label;
+}
+function render(){
+  renderSidebar(); renderTopbar();
+  const fn = VIEWS[ROUTE.view] || VIEWS.dashboard;
+  $('#view').innerHTML = fn(ROUTE.id) || '';
+  $('#sidebar').classList.remove('open');
+}
+function route(){ ROUTE = (()=>{ const r=(location.hash||'#dashboard').slice(1).split('/'); return {view:r[0]||'dashboard', id:r[1]||null}; })(); render(); }
+
+// =========================================================================
+// COMMAND PALETTE (Ctrl+K)
+// =========================================================================
+let paletteResults = [], paletteSel = 0;
+
+function paletteSearch(q){
+  q = q.trim().toLowerCase();
+  const out = [];
+  const push = (type,label,sub,view,id) => out.push({type,label,sub,view,id});
+  if(!q){
+    NAV.forEach(n=>push('Go to', n.label, n.eyebrow, n.key, null));
+    return out.slice(0,8);
+  }
+  NAV.forEach(n=>{ if(n.label.toLowerCase().includes(q)) push('Go to', n.label, n.eyebrow, n.key, null); });
+  STATE.leads.forEach(l=>{ if((l.name+l.destination+l.phone+(l.email||'')).toLowerCase().includes(q)) push('Lead', l.name, l.destination, 'leads', null); });
+  STATE.itineraries.forEach(i=>{ if((i.name+i.destination+i.clientName).toLowerCase().includes(q)) push('Itinerary', i.name, i.destination, 'itineraries', i.id); });
+  STATE.bookings.forEach(b=>{ if((b.clientName+b.destination).toLowerCase().includes(q)) push('Booking', b.clientName, b.destination, 'bookings', null); });
+  STATE.invoices.forEach(i=>{ if((i.invoiceNo+i.clientName).toLowerCase().includes(q)) push('Invoice', i.invoiceNo, i.clientName, 'invoices', null); });
+  STATE.vendors.forEach(v=>{ if((v.name+v.category+(v.city||'')).toLowerCase().includes(q)) push('Vendor', v.name, v.category, 'vendors', null); });
+  STATE.companies.forEach(c=>{ if(c.name.toLowerCase().includes(q)) push('Company', c.name, c.contactPerson||'', 'corporate', c.id); });
+  STATE.visaCases.forEach(v=>{ if((v.clientName+v.country).toLowerCase().includes(q)) push('Visa case', v.clientName, v.country, 'visa', null); });
+  return out.slice(0,12);
+}
+
+function renderPaletteList(){
+  const box = $('#palette-list'); if(!box) return;
+  if(!paletteResults.length){ box.innerHTML = `<div class="px-4 py-6 text-sm text-muted text-center">No matches.</div>`; return; }
+  box.innerHTML = paletteResults.map((r,i)=>`
+    <button class="palette-item w-full text-left px-4 py-2.5 flex items-center justify-between text-sm ${i===paletteSel?'sel':''}"
+      data-action="palette-go" data-i="${i}">
+      <span class="truncate"><span class="font-medium">${esc(r.label)}</span><span class="text-muted"> — ${esc(r.sub||'')}</span></span>
+      <span class="board-label text-[10px] text-muted shrink-0 ml-2">${esc(r.type)}</span>
+    </button>`).join('');
+}
+
+function openPalette(){
+  paletteSel = 0; paletteResults = paletteSearch('');
+  $('#palette-root').innerHTML = `
+    <div class="modal-overlay fixed inset-0 z-50 flex items-start justify-center p-4 pt-24" data-action="palette-overlay">
+      <div class="bg-white rounded-2xl w-full max-w-lg shadow-pop overflow-hidden" data-stop>
+        <input id="palette-input" type="text" placeholder="Search leads, itineraries, invoices, vendors…"
+          class="!border-0 !rounded-none !border-b !border-line !px-4 !py-3.5 text-sm" autocomplete="off">
+        <div id="palette-list" class="max-h-80 overflow-y-auto"></div>
+      </div></div>`;
+  renderPaletteList();
+  const input = $('#palette-input');
+  input.focus();
+  input.addEventListener('input', ()=>{ paletteResults = paletteSearch(input.value); paletteSel = 0; renderPaletteList(); });
+  input.addEventListener('keydown', e=>{
+    if(e.key==='ArrowDown'){ e.preventDefault(); paletteSel=Math.min(paletteSel+1, paletteResults.length-1); renderPaletteList(); }
+    if(e.key==='ArrowUp'){ e.preventDefault(); paletteSel=Math.max(paletteSel-1,0); renderPaletteList(); }
+    if(e.key==='Enter'){ e.preventDefault(); paletteGo(paletteSel); }
+  });
+  $('[data-action="palette-overlay"]').addEventListener('click', e=>{ if(!e.target.closest('[data-stop]')) closePalette(); });
+}
+function closePalette(){ $('#palette-root').innerHTML=''; }
+function paletteGo(i){
+  const r = paletteResults[i]; if(!r) return;
+  closePalette(); navigate(r.view, r.id);
+}
+
+// =========================================================================
+// SHARED HELPERS ACROSS MODULES
+// =========================================================================
+function stageColor(s){ return (LEAD_STAGES.find(x=>x.key===s)||{}).color || '#6B7680'; }
+function itinStatusColor(s){ return {Draft:'#6B7680','Sent to Client':'#C98A3D',Confirmed:'#1F7A6C',Completed:'#2F8F5B',Cancelled:'#B8483D'}[s]||'#6B7680'; }
+function bookingStatusColor(s){ return {Confirmed:'#1F7A6C',Ongoing:'#C98A3D',Completed:'#2F8F5B',Cancelled:'#B8483D'}[s]||'#6B7680'; }
+function teamNames(){ return STATE.settings.team.map(t=>t.name); }
+function invoicePaid(inv){ return STATE.payments.filter(p=>p.invoiceId===inv.id).reduce((s,p)=>s+p.amount,0); }
+function clientPhone(name){
+  const l = STATE.leads.find(x=>x.name===name); if(l) return l.phone;
+  const c = STATE.companies.find(x=>x.name===name); if(c) return c.phone;
+  return '';
+}
+function kpiCard(label, value, sub){
+  return `<div class="ticket p-5">
+    <div class="board-label text-[10px] text-muted">${esc(label)}</div>
+    <div class="font-display text-2xl sm:text-3xl font-semibold mt-1.5 text-navy">${value}</div>
+    ${sub?`<div class="text-xs text-muted mt-1.5">${sub}</div>`:''}</div>`;
+}
+function agencySignature(){
+  const s = STATE.settings;
+  return `<div style="margin-top:30px;font-size:13px;">For ${esc(s.agencyName)}<br><br>
+    <strong>${esc(s.ceoName)}</strong><br><span style="color:#6B7680;">Chief Executive Officer</span>
+    ${s.agencyPhone?`<div style="color:#6B7680;margin-top:6px;">${esc(s.agencyPhone)}${s.agencyEmail?' · '+esc(s.agencyEmail):''}</div>`:''}
+  </div>`;
+}
+function docHeader(subtitle, rightHTML=''){
+  const s = STATE.settings;
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #12303D;padding-bottom:14px;margin-bottom:18px;">
+      <div>
+        ${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="height:38px;margin-bottom:6px;">`:''}
+        <div style="font-family:'Fraunces',serif;font-size:24px;font-weight:600;">${esc(s.agencyName)}</div>
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6B7680;">${esc(subtitle)}</div>
+        ${s.gstNumber?`<div style="font-size:11px;color:#6B7680;">GSTIN: ${esc(s.gstNumber)}</div>`:''}
+      </div>
+      <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:#6B7680;">${rightHTML}</div>
+    </div>`;
+}
+
+// =========================================================================
+// DASHBOARD
+// =========================================================================
+let charts = {};
+function destroyCharts(){ Object.values(charts).forEach(c=>c&&c.destroy()); charts={}; }
+
+VIEWS.dashboard = function(){
+  const openLeads = STATE.leads.filter(l=>!['Won','Lost'].includes(l.stage)).length;
+  const activeBookings = STATE.bookings.filter(b=>['Confirmed','Ongoing'].includes(b.status)).length;
+  const now = new Date();
+  const revThisMonth = STATE.invoices.filter(i=>{ const d=new Date(i.date); return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear(); }).reduce((s,i)=>s+i.total,0);
+  const totalInvoiced = STATE.invoices.reduce((s,i)=>s+i.total,0);
+  const totalPaid = STATE.payments.reduce((s,p)=>s+p.amount,0);
+  const pending = Math.max(0, totalInvoiced-totalPaid);
+  const grossMargin = STATE.bookings.reduce((s,b)=>s+((b.sellPrice||0)-(b.costPrice||0)),0);
+  const dueTasks = STATE.tasks.filter(t=>!t.done && t.dueDate<=todayISO());
+  const upcoming = STATE.bookings.filter(b=>b.startDate>=todayISO() && b.status!=='Cancelled')
+    .sort((a,b)=>a.startDate.localeCompare(b.startDate)).slice(0,5);
+
+  setTimeout(()=>{
+    destroyCharts();
+    const months=[]; for(let i=5;i>=0;i--) months.push(new Date(now.getFullYear(), now.getMonth()-i, 1));
+    const rev = months.map(m=>STATE.invoices.filter(v=>{const d=new Date(v.date);return d.getMonth()===m.getMonth()&&d.getFullYear()===m.getFullYear();}).reduce((s,i)=>s+i.total,0));
+    const c1=document.getElementById('chart-revenue');
+    if(c1) charts.rev = new Chart(c1,{type:'line',
+      data:{labels:months.map(m=>m.toLocaleDateString('en-IN',{month:'short'})),
+        datasets:[{data:rev,borderColor:'#1F7A6C',backgroundColor:'rgba(31,122,108,0.12)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#1F7A6C'}]},
+      options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'₹'+(v/1000)+'k'},grid:{color:'#EEF0EB'}},x:{grid:{display:false}}}}});
+
+    // profit margin by service type
+    const byType={};
+    STATE.invoices.forEach(i=>{ byType[i.type]=(byType[i.type]||0)+i.total; });
+    const c2=document.getElementById('chart-type');
+    if(c2) charts.type = new Chart(c2,{type:'doughnut',
+      data:{labels:Object.keys(byType), datasets:[{data:Object.values(byType),backgroundColor:['#1F7A6C','#C98A3D','#12303D','#7A5CA8','#B8483D']}]},
+      options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}}}});
+
+    // staff activity: leads owned + tasks open + revenue closed
+    const staff = teamNames();
+    const c3=document.getElementById('chart-staff');
+    if(c3) charts.staff = new Chart(c3,{type:'bar',
+      data:{labels:staff, datasets:[
+        {label:'Leads owned', data:staff.map(n=>STATE.leads.filter(l=>l.assignedTo===n).length), backgroundColor:'#1F7A6C'},
+        {label:'Open tasks', data:staff.map(n=>STATE.tasks.filter(t=>t.assignee===n&&!t.done).length), backgroundColor:'#C98A3D'},
+      ]},
+      options:{plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:11}}}},
+        scales:{y:{ticks:{precision:0},grid:{color:'#EEF0EB'}},x:{grid:{display:false}}}}});
+  },0);
+
+  return `
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    ${kpiCard('Open Leads', openLeads, `${STATE.leads.length} total in pipeline`)}
+    ${kpiCard('Active Bookings', activeBookings, `${STATE.bookings.length} total bookings`)}
+    ${kpiCard('Revenue this month', fmtMoney(revThisMonth), `${fmtMoney(totalInvoiced)} invoiced all-time`)}
+    ${kpiCard('Pending Payments', fmtMoney(pending), `Gross margin ${fmtMoney(grossMargin)}`)}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="ticket p-5 lg:col-span-2">
+      <div class="font-display text-base font-semibold mb-3">Revenue trend — last 6 months</div>
+      <div class="h-56"><canvas id="chart-revenue"></canvas></div></div>
+    <div class="ticket p-5">
+      <div class="font-display text-base font-semibold mb-3">Revenue by service type</div>
+      <div class="h-56"><canvas id="chart-type"></canvas></div></div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="ticket p-5">
+      <div class="font-display text-base font-semibold mb-3">Team workload</div>
+      <div class="h-52"><canvas id="chart-staff"></canvas></div></div>
+
+    <div class="ticket p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-display text-base font-semibold">Tasks due & overdue</div>
+        <button class="text-xs font-semibold text-teal" data-action="nav" data-view="tasks">All →</button></div>
+      <div class="flex flex-col divide-y divide-line">
+        ${dueTasks.map(t=>`<div class="py-2.5 flex items-center justify-between text-sm gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <input type="checkbox" class="w-4 h-4 shrink-0" data-action="toggle-task" data-id="${t.id}">
+            <div class="min-w-0"><div class="font-medium truncate">${esc(t.title)}</div>
+              <div class="text-xs text-muted">${esc(t.assignee)} · ${fmtDateShort(t.dueDate)}</div></div></div>
+          ${t.dueDate<todayISO()?'<span class="pill bg-danger/10 text-danger shrink-0">Overdue</span>':'<span class="pill bg-gold/15 text-gold shrink-0">Today</span>'}
+        </div>`).join('') || '<div class="text-sm text-muted py-4">Nothing due — nice work.</div>'}
+      </div></div>
+
+    <div class="ticket p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-display text-base font-semibold">Upcoming departures</div>
+        <button class="text-xs font-semibold text-teal" data-action="nav" data-view="bookings">All →</button></div>
+      <div class="flex flex-col divide-y divide-line">
+        ${upcoming.map(b=>`<div class="py-2.5 text-sm">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-medium truncate">${esc(b.clientName)}</div>
+            <span class="text-xs text-muted font-mono shrink-0">${fmtDateShort(b.startDate)}</span></div>
+          <div class="text-xs text-muted">${esc(b.destination)} · ${b.pax} pax</div>
+          <button class="chip-btn mt-2" data-action="wa-daily" data-id="${b.id}">Send day plan on WhatsApp</button>
+        </div>`).join('') || '<div class="text-sm text-muted py-4">No upcoming departures.</div>'}
+      </div></div>
+  </div>`;
+};
+
+// =========================================================================
+// LEADS  (kanban / list toggle, activity log, WhatsApp, inquiry import)
+// =========================================================================
+let leadView = 'kanban';   // 'kanban' | 'list'
+let leadFilterOwner = '';
+
+function leadCardHTML(l){
+  return `<div class="kanban-card ticket p-3" draggable="true" data-id="${l.id}">
+    <div class="flex items-start justify-between gap-2">
+      <div class="font-medium text-sm leading-snug">${esc(l.name)}</div>
+      <span class="text-[10px] board-label text-muted shrink-0">${esc(l.source)}</span></div>
+    <div class="text-xs text-muted mt-1">${esc(l.destination)}</div>
+    <div class="flex items-center justify-between mt-2 text-[11px] text-muted">
+      <span>${l.pax} pax · ${fmtDateShort(l.travelDate)}</span></div>
+    ${l.assignedTo?`<div class="text-[11px] text-teal mt-1">${esc(l.assignedTo)}</div>`:''}
+    <div class="grid grid-cols-3 gap-1.5 mt-2.5 pt-2.5 border-t border-line">
+      <button class="chip-btn" data-action="edit-lead" data-id="${l.id}">Edit</button>
+      <button class="chip-btn" data-action="lead-wa" data-id="${l.id}">WA</button>
+      <button class="chip-btn" data-action="lead-to-itinerary" data-id="${l.id}">Plan</button>
+    </div></div>`;
+}
+
+VIEWS.leads = function(){
+  let leads = STATE.leads;
+  if(leadFilterOwner) leads = leads.filter(l=>l.assignedTo===leadFilterOwner);
+
+  const head = `
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="chip-btn ${leadView==='kanban'?'active':''}" data-action="lead-view" data-v="kanban">Kanban</button>
+        <button class="chip-btn ${leadView==='list'?'active':''}" data-action="lead-view" data-v="list">List</button>
+        <select class="!w-auto !py-1.5 !text-xs ml-1" data-action="lead-owner-filter">
+          <option value="">All owners</option>
+          ${teamNames().map(n=>`<option value="${esc(n)}" ${leadFilterOwner===n?'selected':''}>${esc(n)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="flex gap-2">
+        ${SYNC==='online'?`<button class="btn btn-outline btn-sm" data-action="fetch-inquiries">Fetch web inquiries</button>`:''}
+        <button class="btn btn-primary btn-sm" data-action="new-lead">+ New Lead</button>
+      </div>
+    </div>`;
+
+  if(leadView==='list'){
+    const cols = [
+      {key:'name', label:'Client'},
+      {key:'destination', label:'Destination'},
+      {label:'Travel', render:r=>fmtDateShort(r.travelDate)},
+      {key:'pax', label:'Pax'},
+      {label:'Owner', render:r=>esc(r.assignedTo||'—')},
+      {key:'source', label:'Source'},
+      {label:'Stage', render:r=>`<span class="pill" style="background:${stageColor(r.stage)}22;color:${stageColor(r.stage)}">${esc(r.stage)}</span>`},
+      {label:'', render:r=>`<div class="flex gap-1.5 justify-end">
+          <button class="chip-btn" data-action="edit-lead" data-id="${r.id}">Edit</button>
+          <button class="chip-btn" data-action="lead-wa" data-id="${r.id}">WA</button>
+          <button class="chip-btn" data-action="lead-log" data-id="${r.id}">Log</button></div>`},
+    ];
+    return head + renderTable({columns:cols, rows:leads, emptyText:'No leads match this filter.'});
+  }
+
+  setTimeout(()=>wireKanbanDnD($('#view'), moveLeadStage),0);
+  return head + renderKanban({stages:LEAD_STAGES, items:leads, renderCard:leadCardHTML});
+};
+
+function moveLeadStage(id, stage){
+  const l = STATE.leads.find(x=>x.id===id); if(!l) return;
+  l.stage = stage; saveState(); render(); toast(`${l.name} moved to ${stage}`);
+}
+
+function findDuplicateLead(phone, email, excludeId){
+  const p = waNumber(phone);
+  return STATE.leads.find(l=>l.id!==excludeId && (
+    (p && waNumber(l.phone)===p) || (email && l.email && l.email.toLowerCase()===email.toLowerCase())));
+}
+
+function openLeadModal(leadId=null, prefill=null){
+  const lead = leadId ? STATE.leads.find(l=>l.id===leadId) : null;
+  const src = lead || prefill || {};
+  openFormModal({
+    title: lead?'Edit lead':'New lead', wide:true,
+    submitLabel: lead?'Save changes':'Create lead',
+    extraFootLeft: lead?`<button type="button" class="btn btn-danger btn-sm" id="del-lead-btn">Delete</button>`:'',
+    fields:[
+      {name:'name', label:'Client name', required:true, value:src.name, full:true},
+      {name:'phone', label:'Phone (with country code)', required:true, value:src.phone, placeholder:'+91 98200 11234'},
+      {name:'email', label:'Email', type:'email', value:src.email},
+      {name:'destination', label:'Destination', required:true, value:src.destination, full:true},
+      {name:'pax', label:'Pax', type:'number', value:src.pax ?? 2},
+      {name:'travelDate', label:'Travel date', type:'date', value:src.travelDate},
+      {name:'travellerType', label:'Traveller type', type:'select', options:TRAVELLER_TYPES, value:src.travellerType||'Family'},
+      {name:'budget', label:'Budget level', type:'select', options:BUDGET_LEVELS, value:src.budget||'Mid-range'},
+      {name:'source', label:'Source', type:'select', options:LEAD_SOURCES, value:src.source||'WhatsApp'},
+      {name:'assignedTo', label:'Assigned to', type:'select', options:['',...teamNames()], value:src.assignedTo||''},
+      {name:'stage', label:'Stage', type:'select', options:LEAD_STAGES.map(s=>s.key), value:src.stage||'New'},
+      {name:'notes', label:'Notes', type:'textarea', value:src.notes, full:true},
+    ],
+    onSubmit:(data)=>{
+      if(!lead){
+        const dupe = findDuplicateLead(data.phone, data.email, null);
+        if(dupe){ closeModal();
+          confirmDialog(`A lead for "${dupe.name}" already exists with a matching phone or email. Create this one anyway?`,
+            ()=>saveLead(data,null));
+          return; }
+      }
+      saveLead(data, lead?.id);
+    },
+    onMount:()=>{
+      $('#del-lead-btn')?.addEventListener('click', ()=>{ closeModal();
+        confirmDialog('Delete this lead permanently?', ()=>{
+          STATE.leads = STATE.leads.filter(l=>l.id!==leadId); saveState(); render(); toast('Lead deleted'); }); });
+    }
+  });
+}
+function saveLead(data, id){
+  if(id){ Object.assign(STATE.leads.find(l=>l.id===id), data); toast('Lead updated'); }
+  else{ STATE.leads.push({id:uid(), createdAt:todayISO(), notes:'', activity:[], ...data}); toast('Lead created'); }
+  closeModal(); saveState(); render();
+}
+
+// ---- activity log ----
+function leadLogModal(id){
+  const l = STATE.leads.find(x=>x.id===id); if(!l) return;
+  const rows = (l.activity||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  openModal({
+    title:`Activity — ${esc(l.name)}`, wide:true,
+    bodyHTML:`
+      <form id="log-form" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 pb-3 border-b border-line mb-3">
+        ${fieldHTML({name:'type', label:'Type', type:'select', options:ACTIVITY_TYPES})}
+        ${fieldHTML({name:'date', label:'Date', type:'date', value:todayISO()})}
+        ${fieldHTML({name:'text', label:'What happened', type:'textarea', rows:2, full:true, required:true})}
+        <div class="sm:col-span-2"><button type="submit" class="btn btn-primary btn-sm">Add to log</button></div>
+      </form>
+      <div class="flex flex-col divide-y divide-line">
+        ${rows.map(a=>`<div class="py-2.5 text-sm">
+          <div class="flex justify-between gap-2"><span class="font-medium">${esc(a.type)}</span>
+            <span class="text-xs text-muted font-mono">${fmtDateShort(a.date)}</span></div>
+          <div class="text-muted mt-0.5">${esc(a.text)}</div>
+          ${a.by?`<div class="text-[11px] text-teal mt-0.5">${esc(a.by)}</div>`:''}
+        </div>`).join('') || '<div class="text-sm text-muted py-3">No activity logged yet.</div>'}
+      </div>`,
+    footHTML:`<div class="flex justify-end"><button class="btn btn-outline" data-action="modal-close">Close</button></div>`,
+    onMount:()=>{
+      $('#log-form').addEventListener('submit', e=>{
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        l.activity = l.activity||[];
+        l.activity.push({id:uid(), type:fd.get('type'), date:fd.get('date')||todayISO(), text:fd.get('text'), by:l.assignedTo||''});
+        saveState(); closeModal(); leadLogModal(id); toast('Activity logged');
+      });
+    }
+  });
+}
+
+// ---- WhatsApp message composer ----
+function leadWhatsAppModal(id){
+  const l = STATE.leads.find(x=>x.id===id); if(!l) return;
+  const s = STATE.settings;
+  const templates = {
+    intro:`Namaste ${l.name},\n\nThank you for your enquiry about ${l.destination}. I'm ${s.ceoName} from ${s.agencyName}.\n\nCould you confirm your travel dates and number of travellers so I can put together the best options for you?\n\nWarm regards,\n${s.ceoName}\n${s.agencyName}`,
+    followup:`Hello ${l.name},\n\nJust following up on your ${l.destination} plan. Shall I share a few package options for ${l.pax} traveller(s)?\n\n${s.ceoName}\n${s.agencyName}`,
+    proposal:`Hello ${l.name},\n\nPlease find our proposal for your ${l.destination} trip attached. Happy to adjust hotels or the day plan to suit you.\n\nLooking forward to your feedback.\n\n${s.ceoName}\n${s.agencyName}`,
+  };
+  openModal({
+    title:`WhatsApp — ${esc(l.name)}`, wide:true,
+    bodyHTML:`
+      <div class="flex gap-2 mb-3 flex-wrap">
+        <button class="chip-btn" data-wa-tpl="intro">First reply</button>
+        <button class="chip-btn" data-wa-tpl="followup">Follow-up</button>
+        <button class="chip-btn" data-wa-tpl="proposal">Proposal sent</button>
+      </div>
+      <input type="hidden" id="wa-phone" value="${esc(l.phone||'')}">
+      <label class="field-label">Message</label>
+      <textarea id="wa-text" rows="10">${esc(templates.intro)}</textarea>
+      <div class="text-[11px] text-muted mt-2">Opens WhatsApp with this message pre-typed to ${esc(l.phone||'—')}. You press send — no messaging charges.</div>`,
+    footHTML:`<div class="flex justify-end gap-2">
+        <button class="btn btn-outline" data-action="modal-close">Cancel</button>
+        ${backendReady()?`<button class="btn btn-primary" data-action="wa-auto">Send automatically</button>`:''}<button class="btn btn-wa" id="wa-send-btn">Open in WhatsApp</button></div>`,
+    onMount:()=>{
+      $$('[data-wa-tpl]').forEach(b=>b.addEventListener('click', ()=>{ $('#wa-text').value = templates[b.dataset.waTpl]; }));
+      $('#wa-send-btn').addEventListener('click', ()=>{
+        openWhatsApp(l.phone, $('#wa-text').value);
+        l.activity = l.activity||[];
+        l.activity.push({id:uid(), type:'WhatsApp', date:todayISO(), text:'Message sent via CRM', by:l.assignedTo||''});
+        saveState(); closeModal();
+      });
+    }
+  });
+}
+
+// ---- import inquiries submitted through the public web form ----
+async function fetchInquiries(){
+  if(SYNC!=='online'){ toast('Connect the backend in Settings first','warn'); return; }
+  try{
+    const rows = await sbFetchInquiries();
+    if(!rows.length){ toast('No new web inquiries'); return; }
+    openModal({
+      title:`${rows.length} new web ${rows.length===1?'inquiry':'inquiries'}`, wide:true,
+      bodyHTML:`<div class="flex flex-col divide-y divide-line">${rows.map(r=>`
+          <div class="py-3 text-sm">
+            <div class="font-medium">${esc(r.name)} — ${esc(r.destination||'')}</div>
+            <div class="text-xs text-muted">${esc(r.phone||'')} ${r.email?'· '+esc(r.email):''} · ${r.pax||1} pax ${r.travel_date?'· '+fmtDateShort(r.travel_date):''}</div>
+            ${r.message?`<div class="text-xs text-muted mt-1">${esc(r.message)}</div>`:''}
+            <button class="chip-btn mt-2" data-action="import-inquiry" data-id="${esc(r.id)}">Add as lead</button>
+          </div>`).join('')}</div>`,
+      footHTML:`<div class="flex justify-end"><button class="btn btn-outline" data-action="modal-close">Close</button></div>`,
+      onMount:()=>{ window.__inquiries = rows; }
+    });
+  }catch(err){ console.error(err); toast('Could not fetch inquiries','err'); }
+}
+async function importInquiry(id){
+  const r = (window.__inquiries||[]).find(x=>String(x.id)===String(id)); if(!r) return;
+  closeModal();
+  openLeadModal(null, {name:r.name, phone:r.phone, email:r.email, destination:r.destination,
+    pax:r.pax||2, travelDate:r.travel_date||'', source:'Website Form', notes:r.message||''});
+  try{ await sbMarkInquiryImported(r.id); }catch(err){ console.error(err); }
+}
+
+// =========================================================================
+// ITINERARIES
+// =========================================================================
+function itineraryCard(it){
+  const margin=(it.sellPrice||0)-(it.costPrice||0);
+  const booked=STATE.bookings.some(b=>b.itineraryId===it.id);
+  return `<div class="ticket">
+    ${it.coverPhoto?`<img src="${esc(it.coverPhoto)}" alt="" class="w-full h-28 object-cover" onerror="this.style.display='none'">`:''}
+    <div class="p-4">
+      <div class="flex items-start justify-between gap-2">
+        <div><div class="font-display text-base font-semibold leading-snug">${esc(it.name)}</div>
+          <div class="text-xs text-muted mt-0.5">${esc(it.clientName)} · ${esc(it.destination)}</div></div>
+        <span class="pill shrink-0" style="background:${itinStatusColor(it.status)}22;color:${itinStatusColor(it.status)}">${esc(it.status)}</span></div>
+      <div class="flex items-center mt-3 text-[11px] text-muted font-mono">
+        <span>${fmtDateShort(it.startDate)}</span><span class="route-line"></span>
+        <span class="route-dot"></span><span class="route-line"></span><span>${fmtDateShort(it.endDate)}</span></div>
+      <div class="text-[11px] text-muted mt-1">${it.days.length} days · ${it.pax} pax · ${esc(it.language||'English')}${it.options?.length?` · ${it.options.length} options`:''}</div>
+    </div>
+    <div class="stub-divider"></div>
+    <div class="p-4 flex items-center justify-between gap-2 flex-wrap">
+      <div class="text-xs"><span class="text-muted">Sell</span> <span class="font-mono font-semibold">${fmtMoney(it.sellPrice)}</span>
+        <span class="text-muted ml-2">Margin</span> <span class="font-mono font-semibold ${margin>=0?'text-success':'text-danger'}">${fmtMoney(margin)}</span></div>
+      <div class="flex gap-1.5">
+        <button class="chip-btn" data-action="open-itinerary" data-id="${it.id}">Open</button>
+        ${booked?'':`<button class="chip-btn" data-action="itinerary-to-booking" data-id="${it.id}">→ Booking</button>`}
+      </div></div></div>`;
+}
+
+VIEWS.itineraries = function(id){
+  if(id) return renderItineraryBuilder(id);
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">${STATE.itineraries.length} itineraries.</div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline btn-sm" data-action="compare-itineraries">Compare trips</button>
+        <button class="btn btn-primary btn-sm" data-action="new-itinerary">+ New Itinerary</button></div></div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      ${STATE.itineraries.map(itineraryCard).join('') || `<div class="text-sm text-muted">No itineraries yet.</div>`}</div>`;
+};
+
+function newItineraryModal(leadId=null){
+  const lead = leadId ? STATE.leads.find(l=>l.id===leadId) : null;
+  openFormModal({
+    title:'New itinerary', wide:true, submitLabel:'Create & open builder',
+    fields:[
+      {name:'name', label:'Itinerary name', required:true, full:true, value: lead?`${lead.destination} — ${lead.name}`:''},
+      {name:'clientName', label:'Client name', required:true, value:lead?.name},
+      {name:'destination', label:'Destination', required:true, value:lead?.destination},
+      {name:'pax', label:'Pax', type:'number', value:lead?.pax ?? 2},
+      {name:'startDate', label:'Start date', type:'date', value:lead?.travelDate},
+      {name:'endDate', label:'End date', type:'date'},
+      {name:'language', label:'Proposal language', type:'select', options:LANGUAGES, value:'English'},
+      {name:'travellerType', label:'Traveller type', type:'select', options:TRAVELLER_TYPES, value:lead?.travellerType||'Family'},
+      {name:'travelPace', label:'Travel pace', type:'select', options:TRAVEL_PACE, value:'Balanced'},
+    ],
+    onSubmit:(d)=>{
+      const id=uid();
+      STATE.itineraries.push({id, days:[], status:'Draft', costPrice:0, sellPrice:0, leadId:lead?.id||null,
+        coverPhoto:'', videoUrl:'', options:[],
+        inclusions:DEFAULT_INCLUSIONS.slice(), exclusions:DEFAULT_EXCLUSIONS.slice(), terms:DEFAULT_TERMS, ...d});
+      closeModal(); saveState(); navigate('itineraries', id); toast('Itinerary created');
+    }
+  });
+}
+
+function renderItineraryBuilder(id){
+  const it = STATE.itineraries.find(x=>x.id===id);
+  if(!it) return `<div class="text-sm text-muted">Itinerary not found. <button class="text-teal font-semibold" data-action="nav" data-view="itineraries">← Back</button></div>`;
+  const margin=(it.sellPrice||0)-(it.costPrice||0);
+  const marginPct = it.sellPrice ? Math.round(margin/it.sellPrice*100) : 0;
+  const F=(field,label,type='text',opts=null)=>{
+    if(type==='select') return `<div><label class="field-label">${label}</label><select data-field="${field}" data-action="itin-field">
+      ${opts.map(o=>`<option value="${esc(o)}" ${it[field]===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>`;
+    return `<div><label class="field-label">${label}</label><input type="${type}" value="${esc(it[field] ?? '')}" data-field="${field}" data-action="itin-field"></div>`;
+  };
+
+  return `
+  <button class="text-sm text-teal font-semibold mb-4" data-action="nav" data-view="itineraries">← All itineraries</button>
+
+  <div class="ticket p-5 mb-5">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="sm:col-span-2"><label class="field-label">Itinerary name</label>
+        <input type="text" value="${esc(it.name)}" data-field="name" data-action="itin-field"></div>
+      ${F('status','Status','select',ITIN_STATUSES)}
+      ${F('clientName','Client')} ${F('destination','Destination')} ${F('pax','Pax','number')}
+      ${F('startDate','Start date','date')} ${F('endDate','End date','date')}
+      ${F('language','Proposal language','select',LANGUAGES)}
+      ${F('travellerType','Traveller type','select',TRAVELLER_TYPES)}
+      ${F('travelPace','Travel pace','select',TRAVEL_PACE)}
+      ${F('costPrice','Cost price','number')} ${F('sellPrice','Sell price','number')}
+      <div class="sm:col-span-2"><label class="field-label">Cover photo URL</label>
+        <input type="url" value="${esc(it.coverPhoto||'')}" placeholder="Paste an image link (e.g. from Unsplash)" data-field="coverPhoto" data-action="itin-field"></div>
+      <div><label class="field-label">Video itinerary link</label>
+        <input type="url" value="${esc(it.videoUrl||'')}" placeholder="NotebookLM / YouTube link" data-field="videoUrl" data-action="itin-field"></div>
+    </div>
+    <div class="mt-3 text-xs text-muted">Margin: <span class="font-mono font-semibold ${margin>=0?'text-success':'text-danger'}">${fmtMoney(margin)} (${marginPct}%)</span></div>
+    <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-line">
+      <button class="btn btn-gold btn-sm" data-action="print-itinerary" data-id="${it.id}">Proposal PDF (info)</button>
+      <button class="btn btn-gold btn-sm" data-action="print-photo-itinerary" data-id="${it.id}">Photo itinerary PDF</button>
+      <button class="btn btn-outline btn-sm" data-action="fetch-photos" data-id="${it.id}">📷 Auto-fetch photos</button>
+      <button class="btn btn-outline btn-sm" data-action="print-comparison" data-id="${it.id}">Comparison sheet</button>
+      <button class="btn btn-outline btn-sm" data-action="make-flyer" data-id="${it.id}">Flyer + QR</button>
+      <button class="btn btn-wa btn-sm" data-action="wa-itinerary" data-id="${it.id}">Send on WhatsApp</button>
+      <button class="btn btn-outline btn-sm" data-action="share-itinerary" data-id="${it.id}">${it.shareToken?'Share link':'Publish link'}</button>
+      ${CONFIG.mapsApiKey?`<button class="btn btn-outline btn-sm" data-action="calc-distances" data-id="${it.id}">Auto-calc distances</button>`:''}
+      <button class="btn btn-outline btn-sm" data-action="itinerary-to-booking" data-id="${it.id}">Convert to Booking</button>
+      <button class="btn btn-outline btn-sm" data-action="duplicate-itinerary" data-id="${it.id}">Duplicate</button>
+      <button class="btn btn-danger btn-sm" data-action="delete-itinerary" data-id="${it.id}">Delete</button>
+    </div>
+  </div>
+
+  <div class="ticket p-5 mb-5">
+    <div class="board-label text-[11px] text-gold mb-1">✦ AI Itinerary Assistant</div>
+    <p class="text-xs text-muted mb-3">Drafts a day-by-day plan in ${esc(it.language||'English')} for a ${esc(it.travellerType||'Family')} trip at a ${esc(it.travelPace||'Balanced')} pace. Always check prices, opening hours and entry rules yourself before sending.</p>
+    ${(!INSIDE_CLAUDE_ARTIFACT && !backendReady()) ? `<p class="text-xs bg-gold/10 text-navy border border-gold/30 rounded-lg px-3 py-2 mb-3">On the hosted site the AI assistant needs the backend function connected (Settings → Backend). Inside Claude it works directly.</p>`:''}
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
+      <div><label class="field-label">Days</label><input type="number" id="ai-days" value="${Math.max(it.days.length,3)}" min="1" max="14"></div>
+      <div><label class="field-label">Budget</label><select id="ai-budget">${BUDGET_LEVELS.map(b=>`<option ${b==='Mid-range'?'selected':''}>${b}</option>`).join('')}</select></div>
+      <div class="col-span-2"><label class="field-label">Interests</label><input type="text" id="ai-interests" placeholder="beaches, food, temples…"></div>
+      <div><button class="btn btn-gold w-full justify-center" id="ai-generate-btn" data-action="ai-generate" data-id="${it.id}">Generate</button></div>
+    </div>
+    <div id="ai-status" class="text-xs text-muted mt-2 hidden"></div>
+    <div class="mt-3 pt-3 border-t border-line">
+      <div class="text-xs text-muted mb-2"><strong class="text-ink">Free option, no setup:</strong> copy the prompt, paste it into ChatGPT, Gemini or claude.ai (all have free tiers), then paste the reply back here.</div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-outline btn-sm" data-action="ai-copy-prompt" data-id="${it.id}">Copy prompt</button>
+        <button class="btn btn-outline btn-sm" data-action="ai-paste-result" data-id="${it.id}">Paste AI reply</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ticket p-5 mb-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="font-display text-base font-semibold">Package options</div>
+      <button class="btn btn-outline btn-sm" data-action="add-option" data-id="${it.id}">+ Add option</button></div>
+    <p class="text-xs text-muted mb-3">Add Budget / Mid-range / Luxury variants — they appear side by side on the comparison sheet, with differences highlighted.</p>
+    ${it.options.length ? `<div class="overflow-x-auto"><table class="w-full text-sm min-w-[640px]">
+      <thead><tr class="board-label text-[10px] text-muted border-b border-line text-left">
+        <th class="py-2 pr-3">Option</th><th class="py-2 px-3">Hotels</th><th class="py-2 px-3">Room</th>
+        <th class="py-2 px-3 text-right">Cost</th><th class="py-2 px-3 text-right">Sell</th><th class="py-2"></th></tr></thead>
+      <tbody>${it.options.map(o=>`<tr class="border-b border-line last:border-0">
+        <td class="py-2 pr-3 font-medium">${esc(o.label)}<div class="text-[11px] text-muted">${esc(o.hotelClass||'')}</div></td>
+        <td class="py-2 px-3 text-xs">${esc(o.hotels||'—')}</td>
+        <td class="py-2 px-3 text-xs">${esc(o.roomType||'—')}</td>
+        <td class="py-2 px-3 text-right font-mono text-xs">${fmtMoney(o.cost)}</td>
+        <td class="py-2 px-3 text-right font-mono text-xs">${fmtMoney(o.sell)}</td>
+        <td class="py-2 text-right"><button class="chip-btn" data-action="edit-option" data-id="${it.id}" data-opt="${o.id}">Edit</button></td>
+      </tr>`).join('')}</tbody></table></div>`
+      : `<div class="text-sm text-muted border border-dashed border-line rounded-xl p-5 text-center">No options yet — add Budget, Mid-range and Luxury to build a comparison sheet.</div>`}
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+    <div class="ticket p-5">
+      <label class="field-label">Inclusions (one per line)</label>
+      <textarea rows="6" data-field="inclusions" data-action="itin-list">${esc((it.inclusions||[]).join('\n'))}</textarea></div>
+    <div class="ticket p-5">
+      <label class="field-label">Exclusions (one per line)</label>
+      <textarea rows="6" data-field="exclusions" data-action="itin-list">${esc((it.exclusions||[]).join('\n'))}</textarea></div>
+  </div>
+  <div class="ticket p-5 mb-5">
+    <label class="field-label">Terms & conditions</label>
+    <textarea rows="3" data-field="terms" data-action="itin-field">${esc(it.terms||'')}</textarea></div>
+
+  <div class="flex items-center justify-between mb-3">
+    <div class="font-display text-base font-semibold">Day-by-day plan</div>
+    <button class="btn btn-outline btn-sm" data-action="add-day" data-id="${it.id}">+ Add day</button></div>
+  <div class="flex flex-col gap-3">
+    ${it.days.map((d,i)=>dayCardHTML(it, d, i)).join('') ||
+      `<div class="text-sm text-muted border border-dashed border-line rounded-xl p-6 text-center">No days yet. Add manually or use the AI assistant.</div>`}
+  </div>`;
+}
+
+function dayCardHTML(it, d, idx){
+  const mapQ = [d.hotel, it.destination].filter(Boolean).join(', ');
+  return `<div class="ticket p-4">
+    <div class="flex items-center gap-3 mb-3 flex-wrap">
+      <div class="gate-badge" style="background:#12303D;color:#E0A75E;">${idx+1}</div>
+      <input type="date" value="${d.date||''}" class="!w-40" data-field="date" data-day="${d.id}" data-id="${it.id}" data-action="day-field">
+      <input type="text" value="${esc(d.title)}" placeholder="Day title" class="flex-1 !min-w-[180px]" data-field="title" data-day="${d.id}" data-id="${it.id}" data-action="day-field">
+      <button class="btn btn-ghost btn-sm" data-action="delete-day" data-day="${d.id}" data-id="${it.id}">✕</button></div>
+    ${d.distanceFromPrev?`<div class="text-[11px] text-muted mb-2 font-mono">↳ ${esc(d.distanceFromPrev)} · ${esc(d.durationFromPrev||'')} from previous stay</div>`:''}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+      <div><label class="field-label">Hotel / stay</label>
+        <div class="flex gap-1.5">
+          <input type="text" value="${esc(d.hotel||'')}" data-field="hotel" data-day="${d.id}" data-id="${it.id}" data-action="day-field">
+          ${d.hotel?`<a class="btn btn-outline btn-sm shrink-0" href="${mapsSearchLink(mapQ)}" target="_blank" title="Open in Google Maps">📍</a>`:''}
+        </div></div>
+      <div><label class="field-label">Transport</label>
+        <input type="text" value="${esc(d.transport||'')}" data-field="transport" data-day="${d.id}" data-id="${it.id}" data-action="day-field"></div>
+    </div>
+    <div><label class="field-label">Activities / notes</label>
+      <textarea rows="2" data-field="notes" data-day="${d.id}" data-id="${it.id}" data-action="day-field">${esc(d.notes||'')}</textarea></div>
+    <div class="mt-2 flex gap-3 items-start">
+      ${d.photo?`<img src="${esc(d.photo)}" class="w-24 h-16 object-cover rounded-lg shrink-0" onerror="this.style.display='none'">`:''}
+      <div class="flex-1"><label class="field-label">Photo URL (for the photo itinerary)</label>
+        <input type="url" value="${esc(d.photo||'')}" placeholder="Auto-fetched, or paste any image link" data-field="photo" data-day="${d.id}" data-id="${it.id}" data-action="day-field"></div>
+    </div>
+  </div>`;
+}
+
+// ---------- Free photo lookup (Wikipedia page images, no API key) ----------
+const PHOTO_STOP = /\b(arrival|arrive|departure|depart|day|fly|flight|to|in|at|the|and|of|transfer|check[- ]?in|check[- ]?out|free|leisure|begins|ends|city|tour|visit|explore)\b/gi;
+const BAD_PHOTO = /flag|coat_of_arms|emblem|seal_of|locator|_map|map_of|\.svg|logo|icon|diagram|chart/i;
+async function wikiImage(query){
+  if(!query) return '';
+  const url = 'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrlimit=4&gsrsearch='
+    + encodeURIComponent(query) + '&prop=pageimages&pithumbsize=1000&format=json&origin=*';
+  try{
+    const r = await fetch(url); const j = await r.json();
+    const pages = j.query && j.query.pages ? Object.values(j.query.pages).sort((a,b)=>(a.index||0)-(b.index||0)) : [];
+    for(const pg of pages){ const src = pg?.thumbnail?.source || ''; if(src && !BAD_PHOTO.test(src)) return src; }
+    return '';
+  }catch(e){ return ''; }
+}
+async function fetchPhotos(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  toast('Looking up photos…');
+  let found=0;
+  if(!it.coverPhoto){
+    const place = it.destination.split(',')[0].trim();          // "Bali, Indonesia" → "Bali"
+    it.coverPhoto = (await wikiImage('Tourism in '+place)) || (await wikiImage(place)) || (await wikiImage(it.destination));
+    if(it.coverPhoto) found++; }
+  for(const d of it.days){
+    if(d.photo) continue;
+    const clean = (d.title||'').replace(/[→\-–—,/]/g,' ').replace(PHOTO_STOP,' ').replace(/\s+/g,' ').trim();
+    const tries = [clean && clean+' '+it.destination, clean, d.hotel && d.hotel+' '+it.destination, it.destination].filter(Boolean);
+    for(const q of tries){ d.photo = await wikiImage(q); if(d.photo) break; }
+    if(d.photo) found++;
+  }
+  saveState(); render();
+  toast(found ? `${found} photo(s) added — replace any that don't fit by pasting your own link` : 'No photos found — paste image links manually', found?'ok':'warn');
+}
+
+// ---------- Photo itinerary PDF ----------
+function printPhotoItinerary(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  const s = STATE.settings, n = nightsBetween(it.startDate, it.endDate);
+  const cover = it.coverPhoto || (it.days.find(d=>d.photo)||{}).photo || '';
+  const html = `
+  <div style="font-family:'Public Sans',sans-serif;color:#1A2229;max-width:780px;margin:0 auto;">
+    <div style="position:relative;height:520px;border-radius:14px;overflow:hidden;background:#12303D;page-break-after:always;">
+      ${cover?`<img src="${esc(cover)}" style="width:100%;height:100%;object-fit:cover;display:block;">`:''}
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(12,35,45,.92) 0%,rgba(12,35,45,.25) 55%,transparent 100%);"></div>
+      <div style="position:absolute;left:32px;right:32px;bottom:32px;color:#fff;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#E0A75E;">${esc(s.agencyName)}</div>
+        <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:600;line-height:1.1;margin-top:8px;">${esc(it.destination)}</div>
+        <div style="font-size:15px;color:#D6DEE1;margin-top:8px;">${n} nights / ${n+1} days · ${it.pax} travellers · ${fmtDate(it.startDate)} – ${fmtDate(it.endDate)}</div>
+        <div style="font-size:13px;color:#B9C6CC;margin-top:4px;">Prepared for ${esc(it.clientName)}</div>
+      </div>
+    </div>
+
+    ${it.days.map((d,i)=>`
+      <div style="margin:0 0 26px;page-break-inside:avoid;">
+        ${d.photo?`<img src="${esc(d.photo)}" style="width:100%;height:300px;object-fit:cover;border-radius:12px;display:block;">`
+          :`<div style="width:100%;height:120px;border-radius:12px;background:linear-gradient(135deg,#1B4552,#1F7A6C);"></div>`}
+        <div style="display:flex;gap:16px;align-items:flex-start;margin-top:12px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;background:#12303D;color:#E0A75E;border-radius:8px;padding:8px 10px;white-space:nowrap;">DAY ${i+1}</div>
+          <div style="flex:1;">
+            <div style="font-size:11px;color:#6B7680;letter-spacing:.1em;text-transform:uppercase;">${fmtDate(d.date)}</div>
+            <div style="font-family:'Fraunces',serif;font-size:21px;font-weight:600;margin:2px 0 6px;">${esc(d.title||'—')}</div>
+            ${d.notes?`<div style="font-size:13.5px;color:#3A444C;line-height:1.5;">${esc(d.notes)}</div>`:''}
+            <div style="font-size:12px;color:#6B7680;margin-top:6px;">${d.hotel?`🏨 ${esc(d.hotel)}`:''}${d.hotel&&d.transport?' &nbsp;·&nbsp; ':''}${d.transport?`🚐 ${esc(d.transport)}`:''}</div>
+          </div>
+        </div>
+      </div>`).join('')}
+
+    <div style="margin-top:10px;padding:16px 18px;background:#F3F5F1;border-radius:12px;display:flex;justify-content:space-between;align-items:baseline;page-break-inside:avoid;">
+      <span style="font-weight:600;">Package price (${it.pax} travellers)</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;">${fmtMoney(it.sellPrice)}</span></div>
+    <div style="font-size:10.5px;color:#9AA3AA;margin-top:14px;">Photos are representative and sourced from Wikimedia Commons / suppliers. Full inclusions, exclusions and terms are in the accompanying proposal document.</div>
+    ${agencySignature()}
+  </div>`;
+  printHTML(html);
+}
+
+function updateItineraryField(id, field, value){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  it[field] = ['pax','costPrice','sellPrice'].includes(field) ? (Number(value)||0) : value;
+  saveState();
+}
+function updateItineraryList(id, field, value){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  it[field] = value.split('\n').map(s=>s.trim()).filter(Boolean);
+  saveState();
+}
+function updateDayField(itId, dayId, field, value){
+  const d = STATE.itineraries.find(x=>x.id===itId)?.days.find(x=>x.id===dayId);
+  if(d){ d[field]=value; saveState(); }
+}
+function addDay(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  const last = it.days.length ? it.days[it.days.length-1].date : (it.startDate||todayISO());
+  it.days.push({id:uid(), date: it.days.length?addDays(last,1):last, title:'', hotel:'', transport:'', notes:''});
+  saveState(); render();
+}
+function deleteDay(itId, dayId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  it.days = it.days.filter(d=>d.id!==dayId); saveState(); render();
+}
+function duplicateItinerary(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  const c = JSON.parse(JSON.stringify(it));
+  c.id=uid(); c.name=it.name+' (Copy)'; c.status='Draft';
+  c.days=c.days.map(d=>({...d,id:uid()})); c.options=(c.options||[]).map(o=>({...o,id:uid()}));
+  STATE.itineraries.push(c); saveState(); navigate('itineraries', c.id); toast('Itinerary duplicated');
+}
+
+function optionModal(itId, optId=null){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  const o = optId ? it.options.find(x=>x.id===optId) : null;
+  openFormModal({
+    title: o?'Edit option':'Add package option', wide:true, submitLabel:'Save option',
+    extraFootLeft: o?`<button type="button" class="btn btn-danger btn-sm" id="del-opt-btn">Delete</button>`:'',
+    fields:[
+      {name:'label', label:'Option name', required:true, value:o?.label||'', placeholder:'Budget / Mid-range / Luxury'},
+      {name:'hotelClass', label:'Hotel class', value:o?.hotelClass||'', placeholder:'4-star'},
+      {name:'hotels', label:'Hotels', value:o?.hotels||'', full:true, placeholder:'Comma-separated hotel names'},
+      {name:'roomType', label:'Room type', value:o?.roomType||''},
+      {name:'notes', label:'What is different', value:o?.notes||''},
+      {name:'cost', label:'Cost price', type:'number', value:o?.cost ?? 0},
+      {name:'sell', label:'Sell price', type:'number', value:o?.sell ?? 0},
+    ],
+    onSubmit:(d)=>{
+      if(o) Object.assign(o,d); else it.options.push({id:uid(), ...d});
+      closeModal(); saveState(); render(); toast('Option saved');
+    },
+    onMount:()=>{ $('#del-opt-btn')?.addEventListener('click', ()=>{
+      it.options = it.options.filter(x=>x.id!==optId); closeModal(); saveState(); render(); toast('Option removed'); }); }
+  });
+}
+
+// ---------- AI Itinerary Assistant (multi-language) ----------
+async function generateAIItinerary(it, numDays, budget, interests){
+  const lang = it.language || 'English';
+  const sys = `You are a meticulous travel itinerary planner for an Indian travel agency. Respond with ONLY a raw JSON array, no markdown fences and no commentary. Each element must be {"title":"...","hotel":"...","transport":"...","notes":"..."}. Write the VALUES in ${lang}, but keep the JSON keys in English exactly as given. Keep every field brief.`;
+  const usr = `Plan ${numDays} day(s) in ${it.destination} for ${it.pax} traveller(s). Traveller type: ${it.travellerType||'Family'}. Pace: ${it.travelPace||'Balanced'}. Budget level: ${budget}. Interests: ${interests||'general sightseeing'}. Return exactly ${numDays} array elements in day order.`;
+  let text = '';
+  if(!INSIDE_CLAUDE_ARTIFACT && backendReady()){
+    const r = await callBackend('ai_itinerary', { system:sys, prompt:usr });
+    text = r.text || '';
+  } else {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system:sys, messages:[{role:'user', content:usr}] })
+    });
+    if(!resp.ok) throw new Error('AI request failed ('+resp.status+')');
+    const data = await resp.json();
+    text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+  }
+  const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+  if(!Array.isArray(parsed)) throw new Error('Unexpected AI response');
+  return parsed;
+}
+function buildAIPrompt(it, numDays, budget, interests){
+  const lang = it.language || 'English';
+  const sys = `You are a meticulous travel itinerary planner for an Indian travel agency. Respond with ONLY a raw JSON array, no markdown fences and no commentary. Each element must be {"title":"...","hotel":"...","transport":"...","notes":"..."}. Write the VALUES in ${lang}, but keep the JSON keys in English exactly as given. Keep every field brief.`;
+  const usr = `Plan ${numDays} day(s) in ${it.destination} for ${it.pax} traveller(s). Traveller type: ${it.travellerType||'Family'}. Pace: ${it.travelPace||'Balanced'}. Budget level: ${budget}. Interests: ${interests||'general sightseeing'}. Return exactly ${numDays} array elements in day order.`;
+  return { sys, usr };
+}
+function applyAIPlan(it, plan){
+  const base = it.startDate || todayISO();
+  it.days = plan.map((p,i)=>({id:uid(), date:addDays(base,i), title:p.title||'', hotel:p.hotel||'', transport:p.transport||'', notes:p.notes||'', photo:''}));
+  if(it.days.length) it.endDate = it.days[it.days.length-1].date;
+  saveState(); render();
+}
+function aiCopyPrompt(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  const { sys, usr } = buildAIPrompt(it, Number($('#ai-days').value)||3, $('#ai-budget').value, $('#ai-interests').value);
+  const text = sys + '\n\n' + usr;
+  const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('Prompt copied — paste it into ChatGPT / Gemini / claude.ai'); }
+  catch(e){ toast('Could not copy automatically','warn'); }
+  ta.remove();
+}
+function aiPasteResult(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  openModal({ title:'Paste the AI reply', wide:true,
+    bodyHTML:`<p class="text-xs text-muted mb-2">Paste the whole reply. It should be a JSON list starting with <span class="font-mono">[</span>. Extra text around it is fine.</p>
+      <textarea id="ai-paste" rows="12" placeholder='[{"title":"Arrival in Hanoi","hotel":"...","transport":"...","notes":"..."}, ...]'></textarea>`,
+    footHTML:`<div class="flex justify-end gap-2"><button class="btn btn-outline" data-action="modal-close">Cancel</button>
+      <button class="btn btn-primary" id="ai-paste-btn">Import days</button></div>`,
+    onMount:()=>{ $('#ai-paste-btn').addEventListener('click', ()=>{
+      const raw = $('#ai-paste').value;
+      const m = raw.match(/\[[\s\S]*\]/);
+      try{
+        const plan = JSON.parse(m ? m[0] : raw);
+        if(!Array.isArray(plan) || !plan.length) throw new Error('empty');
+        closeModal(); applyAIPlan(it, plan); toast(`${plan.length} days imported — review before sending`);
+      }catch(e){ toast('That does not look like a valid JSON list — ask the AI to reply with JSON only','err'); }
+    }); }});
+}
+async function handleAIGenerate(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  const days = Number($('#ai-days').value)||3;
+  const btn=$('#ai-generate-btn'), st=$('#ai-status');
+  btn.disabled=true; btn.textContent='Generating…';
+  st.classList.remove('hidden'); st.textContent=`Drafting a ${days}-day plan in ${it.language||'English'}…`;
+  try{
+    const plan = await generateAIItinerary(it, days, $('#ai-budget').value, $('#ai-interests').value);
+    applyAIPlan(it, plan); toast('AI draft inserted — review before sending');
+  }catch(err){
+    console.error(err);
+    st.textContent = 'Could not generate right now. You can still build the plan manually below.';
+    btn.disabled=false; btn.textContent='Generate';
+    toast('AI generation failed','err');
+  }
+}
+
+// ---------- Proposal PDF ----------
+function printItinerary(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  const s = STATE.settings;
+  const nights = nightsBetween(it.startDate, it.endDate);
+  const html = `
+  <div style="max-width:760px;margin:32px auto;font-family:'Public Sans',sans-serif;color:#1A2229;">
+    ${docHeader('Travel Proposal', `Prepared for<br><strong style="color:#1A2229;">${esc(it.clientName)}</strong><br>${fmtDate(todayISO())}`)}
+    ${it.coverPhoto?`<img src="${esc(it.coverPhoto)}" style="width:100%;height:190px;object-fit:cover;border-radius:10px;margin-bottom:16px;">`:''}
+    <div style="font-family:'Fraunces',serif;font-size:22px;font-weight:600;">${esc(it.name)}</div>
+    <div style="color:#6B7680;font-size:13px;margin-bottom:4px;">${esc(it.destination)} · ${nights} nights / ${nights+1} days · ${it.pax} travellers</div>
+    <div style="color:#6B7680;font-size:13px;margin-bottom:18px;">${fmtDate(it.startDate)} – ${fmtDate(it.endDate)}</div>
+    ${it.videoUrl?`<div style="font-size:12px;margin-bottom:16px;">▶ Watch the video itinerary: <a href="${esc(it.videoUrl)}">${esc(it.videoUrl)}</a></div>`:''}
+
+    ${it.days.map((d,i)=>`
+      <div style="border-left:3px solid #C98A3D;padding:2px 0 10px 14px;margin-bottom:14px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#6B7680;text-transform:uppercase;">Day ${i+1} · ${fmtDate(d.date)}</div>
+        <div style="font-weight:600;font-size:15px;margin:2px 0 4px;">${esc(d.title||'—')}</div>
+        ${d.notes?`<div style="font-size:13px;color:#3A444C;margin-bottom:4px;">${esc(d.notes)}</div>`:''}
+        ${d.distanceFromPrev?`<div style="font-size:11px;color:#6B7680;margin-bottom:3px;">Travel: ${esc(d.distanceFromPrev)} · approx. ${esc(d.durationFromPrev||'')}</div>`:''}
+        <div style="font-size:12px;color:#6B7680;">
+          ${d.hotel?`🏨 ${esc(d.hotel)}`:''}${d.hotel&&d.transport?' &nbsp;·&nbsp; ':''}${d.transport?`🚐 ${esc(d.transport)}`:''}</div>
+      </div>`).join('')}
+
+    <div style="display:flex;gap:24px;margin-top:22px;page-break-inside:avoid;">
+      <div style="flex:1;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#6B7680;text-transform:uppercase;margin-bottom:6px;">Inclusions</div>
+        <ul style="font-size:12.5px;padding-left:16px;margin:0;color:#3A444C;">${(it.inclusions||[]).map(x=>`<li style="margin-bottom:3px;">${esc(x)}</li>`).join('')}</ul></div>
+      <div style="flex:1;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;color:#6B7680;text-transform:uppercase;margin-bottom:6px;">Exclusions</div>
+        <ul style="font-size:12.5px;padding-left:16px;margin:0;color:#3A444C;">${(it.exclusions||[]).map(x=>`<li style="margin-bottom:3px;">${esc(x)}</li>`).join('')}</ul></div>
+    </div>
+
+    <div style="margin-top:22px;padding:14px 16px;background:#F3F5F1;border-radius:10px;page-break-inside:avoid;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;">
+        <span style="font-weight:600;">Package price (${it.pax} travellers)</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;">${fmtMoney(it.sellPrice)}</span></div>
+    </div>
+    ${it.terms?`<div style="margin-top:16px;font-size:11px;color:#6B7680;line-height:1.5;">${esc(it.terms)}</div>`:''}
+    ${agencySignature()}
+  </div>`;
+  printHTML(html);
+}
+
+// ---------- Comparison sheet (Budget / Mid / Luxury) ----------
+function printComparison(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  if(!it.options || it.options.length<2){ toast('Add at least two package options first','warn'); return; }
+  const opts = it.options;
+  const differs = (key) => new Set(opts.map(o=>String(o[key]??''))).size > 1;
+  const cell = (o,key,fmt) => {
+    const hi = differs(key);
+    const v = fmt ? fmt(o[key]) : (o[key]||'—');
+    return `<td style="padding:10px 12px;font-size:12.5px;vertical-align:top;${hi?'background:#FFF7EA;font-weight:600;':''}">${esc(String(v))}</td>`;
+  };
+  const html = `
+  <div style="max-width:820px;margin:32px auto;font-family:'Public Sans',sans-serif;color:#1A2229;">
+    ${docHeader('Package Comparison', `${esc(it.clientName)}<br>${fmtDate(todayISO())}`)}
+    <div style="font-family:'Fraunces',serif;font-size:20px;font-weight:600;">${esc(it.destination)} — ${nightsBetween(it.startDate,it.endDate)} nights</div>
+    <div style="color:#6B7680;font-size:12px;margin-bottom:16px;">${it.pax} travellers · ${fmtDate(it.startDate)} – ${fmtDate(it.endDate)}</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="text-align:left;padding:10px 12px;border-bottom:2px solid #12303D;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6B7680;"></th>
+        ${opts.map(o=>`<th style="text-align:left;padding:10px 12px;border-bottom:2px solid #12303D;font-family:'Fraunces',serif;font-size:16px;">${esc(o.label)}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+        ${[['hotelClass','Hotel class'],['hotels','Hotels'],['roomType','Room type'],['notes','Highlights']].map(([k,lbl])=>`
+          <tr style="border-bottom:1px solid #E1E4DF;">
+            <td style="padding:10px 12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6B7680;">${lbl}</td>
+            ${opts.map(o=>cell(o,k)).join('')}</tr>`).join('')}
+        <tr style="border-top:2px solid #12303D;">
+          <td style="padding:12px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6B7680;">Package price</td>
+          ${opts.map(o=>`<td style="padding:12px;font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;">${fmtMoney(o.sell)}</td>`).join('')}
+        </tr>
+      </tbody></table>
+    <div style="font-size:11px;color:#6B7680;margin-top:10px;">Highlighted cells show where the options differ.</div>
+    ${it.terms?`<div style="margin-top:16px;font-size:11px;color:#6B7680;line-height:1.5;">${esc(it.terms)}</div>`:''}
+    ${agencySignature()}
+  </div>`;
+  printHTML(html);
+}
+
+// ---------- Flyer with QR code ----------
+async function makeFlyer(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  const s = STATE.settings;
+  const nights = nightsBetween(it.startDate, it.endDate);
+  const enquiryText = `Hi ${s.agencyName}, I'm interested in the ${it.destination} package (${nights}N/${nights+1}D).`;
+  const qrTarget = it.shareToken ? shareUrl(it) : (s.agencyPhone ? waLink(s.agencyPhone, enquiryText) : (s.website || 'https://wa.me/'));
+  const qr = await qrDataUrl(qrTarget, 150);
+
+  const flyer = `
+  <div id="flyer-inner" style="width:420px;margin:0 auto;font-family:'Public Sans',sans-serif;color:#fff;background:#12303D;border-radius:16px;overflow:hidden;">
+    ${it.coverPhoto?`<img src="${esc(it.coverPhoto)}" style="width:100%;height:170px;object-fit:cover;">`
+      :`<div style="height:110px;background:linear-gradient(135deg,#1B4552,#1F7A6C);"></div>`}
+    <div style="padding:20px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#E0A75E;">${esc(s.agencyName)}</div>
+      <div style="font-family:'Fraunces',serif;font-size:26px;font-weight:600;line-height:1.15;margin-top:6px;">${esc(it.destination)}</div>
+      <div style="font-size:13px;color:#B9C6CC;margin-top:4px;">${nights} nights / ${nights+1} days · ${esc(it.travellerType||'')}</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.25);">
+        <div style="flex:1;">
+          <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#B9C6CC;">Starting from</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:#E0A75E;">${fmtMoney(it.options?.length?Math.min(...it.options.map(o=>o.sell||0)):it.sellPrice)}</div>
+          <div style="font-size:10px;color:#B9C6CC;">per package · ${it.pax} pax</div>
+        </div>
+        ${qr?`<div style="background:#fff;padding:6px;border-radius:8px;"><img src="${qr}" style="display:block;width:88px;height:88px;"></div>`:''}
+      </div>
+      <ul style="font-size:11.5px;color:#D6DEE1;padding-left:15px;margin:14px 0 0;">
+        ${(it.inclusions||[]).slice(0,4).map(x=>`<li style="margin-bottom:2px;">${esc(x)}</li>`).join('')}</ul>
+      <div style="margin-top:14px;font-size:11px;color:#B9C6CC;">
+        Scan to enquire on WhatsApp${s.agencyPhone?` · ${esc(s.agencyPhone)}`:''}</div>
+    </div>
+  </div>`;
+
+  openModal({
+    title:'Marketing flyer', wide:true,
+    bodyHTML:`<div style="background:#F3F5F1;padding:18px;border-radius:12px;">${flyer}</div>
+      <p class="text-xs text-muted mt-3">${it.shareToken?'The QR code opens the public itinerary page for this package.':'The QR code opens a pre-filled WhatsApp enquiry to your agency number. Publish a share link first if you want it to open the itinerary page instead.'}</p>`,
+    footHTML:`<div class="flex justify-end gap-2">
+      <button class="btn btn-outline" data-action="modal-close">Close</button>
+      <button class="btn btn-primary" id="print-flyer-btn">Print / Save as image</button></div>`,
+    onMount:()=>{ $('#print-flyer-btn').addEventListener('click', ()=>{
+      printHTML(`<div style="padding:30px;">${flyer}</div>`); }); }
+  });
+}
+
+// ---------- WhatsApp share of an itinerary ----------
+function waItinerary(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  const s = STATE.settings;
+  const nights = nightsBetween(it.startDate, it.endDate);
+  const lines = [
+    `*${it.destination} — ${nights}N / ${nights+1}D*`,
+    `For: ${it.clientName} (${it.pax} pax)`,
+    `Dates: ${fmtDate(it.startDate)} – ${fmtDate(it.endDate)}`, '',
+    ...it.days.map((d,i)=>`*Day ${i+1}* (${fmtDateShort(d.date)}): ${d.title}${d.hotel?`\n   🏨 ${d.hotel}`:''}`),
+    '',
+    it.options?.length
+      ? it.options.map(o=>`${o.label}: ${fmtMoney(o.sell)}`).join('\n')
+      : `Package price: ${fmtMoney(it.sellPrice)}`,
+    '',
+    it.shareToken?`🔗 View online: ${shareUrl(it)}`:'',
+    it.videoUrl?`▶ Video itinerary: ${it.videoUrl}`:'',
+    `— ${s.ceoName}, ${s.agencyName}`,
+  ].filter(x=>x!=='');
+  const phone = clientPhone(it.clientName);
+  openModal({
+    title:'Send itinerary on WhatsApp', wide:true,
+    bodyHTML:`<label class="field-label">Message</label>
+      <textarea id="wa-text" rows="12">${esc(lines.join('\n'))}</textarea>
+      <div class="mt-3"><label class="field-label">Send to</label>
+      <input type="text" id="wa-phone" value="${esc(phone)}" placeholder="+91…"></div>`,
+    footHTML:`<div class="flex justify-end gap-2">
+      <button class="btn btn-outline" data-action="modal-close">Cancel</button>
+      ${backendReady()?`<button class="btn btn-primary" data-action="wa-auto">Send automatically</button>`:''}<button class="btn btn-wa" id="wa-send-btn">Open in WhatsApp</button></div>`,
+    onMount:()=>{ $('#wa-send-btn').addEventListener('click', ()=>{
+      openWhatsApp($('#wa-phone').value, $('#wa-text').value); closeModal(); }); }
+  });
+}
+
+// ---------- Public share link (needs team sync) ----------
+function shareUrl(it){ return publicBase()+'view-itinerary.html?t='+encodeURIComponent(it.shareToken); }
+async function shareItinerary(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  if(SYNC!=='online'){ toast('Connect team sync in Settings to publish share links','warn'); return; }
+  if(!it.shareToken) it.shareToken = uid()+uid();
+  const s = STATE.settings;
+  const pub = {
+    name:it.name, destination:it.destination, clientName:it.clientName, startDate:it.startDate, endDate:it.endDate,
+    pax:it.pax, language:it.language, coverPhoto:it.coverPhoto, videoUrl:it.videoUrl,
+    days:it.days.map(d=>({date:d.date,title:d.title,hotel:d.hotel,transport:d.transport,notes:d.notes,photo:d.photo||'',distanceFromPrev:d.distanceFromPrev||'',durationFromPrev:d.durationFromPrev||''})),
+    inclusions:it.inclusions, exclusions:it.exclusions, terms:it.terms, sellPrice:it.sellPrice,
+    options:(it.options||[]).map(o=>({label:o.label,hotelClass:o.hotelClass,hotels:o.hotels,roomType:o.roomType,notes:o.notes,sell:o.sell})),
+    agency:{name:s.agencyName, ceo:s.ceoName, phone:s.agencyPhone, email:s.agencyEmail, logoUrl:s.logoUrl, website:s.website},
+  };
+  try{
+    const { error } = await SB.from('shared_itineraries').upsert({ token:it.shareToken, data:pub, updated_at:new Date().toISOString() });
+    if(error) throw error;
+    saveState();
+    const url = shareUrl(it);
+    openModal({ title:'Public itinerary link', bodyHTML:`
+        <p class="text-xs text-muted mb-2">Anyone with this link can view the proposal (no login). Re-publish after edits to update it.</p>
+        <input type="text" value="${esc(url)}" readonly id="share-url">`,
+      footHTML:`<div class="flex justify-end gap-2 flex-wrap">
+        <button class="btn btn-outline" data-action="modal-close">Close</button>
+        <button class="btn btn-outline" id="copy-share">Copy link</button>
+        <button class="btn btn-wa" id="wa-share">Send on WhatsApp</button></div>`,
+      onMount:()=>{
+        $('#copy-share').addEventListener('click', ()=>{ $('#share-url').select(); try{ document.execCommand('copy'); toast('Link copied'); }catch(e){} });
+        $('#wa-share').addEventListener('click', ()=>{ closeModal();
+          quickWaModal('Send itinerary link', `Hello ${it.clientName},\n\nHere is your ${it.destination} proposal:\n${url}\n\n— ${s.ceoName}, ${s.agencyName}`, clientPhone(it.clientName)); });
+      }});
+    render();
+  }catch(err){ console.error(err); toast('Could not publish — run the setup SQL for shared_itineraries','err'); }
+}
+
+// ---------- Google Maps distances (Routes API, browser key restricted to your domain) ----------
+async function computeDistances(id){
+  const it = STATE.itineraries.find(x=>x.id===id); if(!it) return;
+  if(!CONFIG.mapsApiKey){ toast('Add a Google Maps API key in Settings','warn'); return; }
+  const stops = it.days.map(d=>d.hotel ? `${d.hotel}, ${it.destination}` : '');
+  let done=0;
+  toast('Calculating distances…');
+  for(let i=1;i<it.days.length;i++){
+    const from=stops[i-1], to=stops[i];
+    if(!from||!to||from===to){ it.days[i].distanceFromPrev=''; it.days[i].durationFromPrev=''; continue; }
+    try{
+      const resp = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Goog-Api-Key':CONFIG.mapsApiKey,
+                 'X-Goog-FieldMask':'routes.distanceMeters,routes.duration'},
+        body: JSON.stringify({ origin:{address:from}, destination:{address:to}, travelMode:'DRIVE' })
+      });
+      const data = await resp.json();
+      const r = data.routes && data.routes[0];
+      if(r){
+        it.days[i].distanceFromPrev = (r.distanceMeters/1000).toFixed(0)+' km';
+        const secs = parseInt(String(r.duration||'0s'));
+        it.days[i].durationFromPrev = secs>=3600 ? `${Math.floor(secs/3600)}h ${Math.round((secs%3600)/60)}m` : `${Math.round(secs/60)} min`;
+        done++;
+      }
+    }catch(err){ console.error(err); }
+  }
+  saveState(); render();
+  toast(done ? `Distances added for ${done} leg(s)` : 'No routes found — check hotel names and your Maps key', done?'ok':'warn');
+}
+
+function compareItinerariesModal(){
+  if(STATE.itineraries.length<2){ toast('Add at least two itineraries','warn'); return; }
+  const opts = STATE.itineraries.map(i=>({value:i.id,label:i.name}));
+  openFormModal({ title:'Compare two trips', submitLabel:'Compare',
+    fields:[{name:'a',label:'Option A',type:'select',options:opts,full:true},
+            {name:'b',label:'Option B',type:'select',options:opts,full:true}],
+    onSubmit:(d)=>{ closeModal();
+      if(d.a===d.b){ toast('Pick two different itineraries','warn'); return; }
+      const a=STATE.itineraries.find(x=>x.id===d.a), b=STATE.itineraries.find(x=>x.id===d.b);
+      const row=(l,va,vb)=>`<tr class="border-b border-line"><td class="py-2 pr-3 text-muted text-xs board-label">${l}</td><td class="py-2 px-3 font-medium">${va}</td><td class="py-2 pl-3 font-medium">${vb}</td></tr>`;
+      openModal({ title:'Trip comparison', wide:true,
+        bodyHTML:`<div id="cmp"><table class="w-full text-sm">
+          <thead><tr class="border-b-2 border-navy"><th></th><th class="text-left py-2 px-3">${esc(a.name)}</th><th class="text-left py-2 pl-3">${esc(b.name)}</th></tr></thead>
+          <tbody>
+            ${row('Destination', esc(a.destination), esc(b.destination))}
+            ${row('Duration', a.days.length+' days', b.days.length+' days')}
+            ${row('Pax', a.pax, b.pax)}
+            ${row('Sell price', fmtMoney(a.sellPrice), fmtMoney(b.sellPrice))}
+            ${row('Margin', fmtMoney(a.sellPrice-a.costPrice), fmtMoney(b.sellPrice-b.costPrice))}
+          </tbody></table></div>`,
+        footHTML:`<div class="flex justify-end gap-2"><button class="btn btn-outline" data-action="modal-close">Close</button>
+          <button class="btn btn-primary" data-action="print-node" data-target="cmp">Print</button></div>`});
+    }});
+}
+
+// =========================================================================
+// BOOKINGS  (+ hotel voucher, daily programme WhatsApp)
+// =========================================================================
+VIEWS.bookings = function(){
+  const cols=[
+    {key:'clientName', label:'Client'},
+    {key:'destination', label:'Destination'},
+    {label:'Travel dates', render:r=>`${fmtDateShort(r.startDate)} – ${fmtDateShort(r.endDate)}`},
+    {key:'pax', label:'Pax'},
+    {label:'Handled by', render:r=>esc(r.handledBy||'—')},
+    {label:'Status', render:r=>`<span class="pill" style="background:${bookingStatusColor(r.status)}22;color:${bookingStatusColor(r.status)}">${esc(r.status)}</span>`},
+    {label:'Margin', render:r=>`<span class="font-mono">${fmtMoney((r.sellPrice||0)-(r.costPrice||0))}</span>`},
+    {label:'', render:r=>`<div class="flex gap-1.5 justify-end flex-wrap">
+        <button class="chip-btn" data-action="edit-booking" data-id="${r.id}">Edit</button>
+        <button class="chip-btn" data-action="voucher-booking" data-id="${r.id}">Voucher</button>
+        <button class="chip-btn" data-action="wa-daily" data-id="${r.id}">Day plan</button>
+        <button class="chip-btn" data-action="invoice-from-booking" data-id="${r.id}">Invoice</button></div>`},
+  ];
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">${STATE.bookings.length} bookings. Create new ones by converting an itinerary.</div>
+      <button class="btn btn-outline btn-sm" data-action="nav" data-view="itineraries">Go to itineraries →</button></div>
+    ${renderTable({columns:cols, rows:STATE.bookings, emptyText:'No bookings yet — convert an itinerary to create one.'})}`;
+};
+
+function itineraryToBooking(itId){
+  const it = STATE.itineraries.find(x=>x.id===itId); if(!it) return;
+  if(STATE.bookings.some(b=>b.itineraryId===itId)){ toast('This itinerary is already booked','warn'); return; }
+  STATE.bookings.push({id:uid(), itineraryId:itId, clientName:it.clientName, destination:it.destination,
+    startDate:it.startDate, endDate:it.endDate, pax:it.pax, status:'Confirmed',
+    costPrice:it.costPrice, sellPrice:it.sellPrice, handledBy:'', companyId:null});
+  it.status='Confirmed';
+  if(it.leadId){ const l=STATE.leads.find(x=>x.id===it.leadId); if(l) l.stage='Won'; }
+  saveState(); render(); toast('Booking created from itinerary');
+}
+
+function editBookingModal(id){
+  const b = STATE.bookings.find(x=>x.id===id); if(!b) return;
+  openFormModal({
+    title:'Edit booking', wide:true, submitLabel:'Save changes',
+    extraFootLeft:`<button type="button" class="btn btn-danger btn-sm" id="del-bk-btn">Delete</button>`,
+    fields:[
+      {name:'clientName', label:'Client', value:b.clientName, full:true},
+      {name:'destination', label:'Destination', value:b.destination},
+      {name:'pax', label:'Pax', type:'number', value:b.pax},
+      {name:'startDate', label:'Start date', type:'date', value:b.startDate},
+      {name:'endDate', label:'End date', type:'date', value:b.endDate},
+      {name:'status', label:'Status', type:'select', options:BOOKING_STATUSES, value:b.status},
+      {name:'handledBy', label:'Handled by', type:'select', options:['',...teamNames()], value:b.handledBy||''},
+      {name:'costPrice', label:'Cost price', type:'number', value:b.costPrice},
+      {name:'sellPrice', label:'Sell price', type:'number', value:b.sellPrice},
+    ],
+    onSubmit:(d)=>{ Object.assign(b,d); closeModal(); saveState(); render(); toast('Booking updated'); },
+    onMount:()=>{ $('#del-bk-btn').addEventListener('click', ()=>{ closeModal();
+      confirmDialog('Delete this booking?', ()=>{ STATE.bookings=STATE.bookings.filter(x=>x.id!==id); saveState(); render(); toast('Booking deleted'); }); }); }
+  });
+}
+
+function printVoucher(id){
+  const b = STATE.bookings.find(x=>x.id===id); if(!b) return;
+  const it = STATE.itineraries.find(x=>x.id===b.itineraryId);
+  const hotels = it ? [...new Set(it.days.map(d=>d.hotel).filter(Boolean))] : [];
+  const html=`<div style="max-width:720px;margin:36px auto;font-family:'Public Sans',sans-serif;color:#1A2229;">
+    ${docHeader('Booking Confirmation Voucher', `Voucher #${b.id.slice(-6).toUpperCase()}<br>Issued ${fmtDate(todayISO())}`)}
+    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+      ${[['Guest name',esc(b.clientName)],['Destination',esc(b.destination)],
+         ['Travel dates',`${fmtDate(b.startDate)} – ${fmtDate(b.endDate)}`],['Travellers',b.pax+' pax'],
+         ['Hotels',esc(hotels.join(', ')||'To be confirmed')],['Status',esc(b.status)]]
+        .map(([k,v])=>`<tr><td style="padding:7px 0;color:#6B7680;width:160px;">${k}</td><td style="padding:7px 0;font-weight:500;">${v}</td></tr>`).join('')}
+    </table>
+    ${it && it.days.length ? `<div style="margin-top:20px;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#6B7680;margin-bottom:8px;">Day plan</div>
+      ${it.days.map((d,i)=>`<div style="font-size:12.5px;padding:5px 0;border-bottom:1px solid #EEF0EB;">
+        <strong>Day ${i+1}</strong> ${fmtDateShort(d.date)} — ${esc(d.title)}${d.hotel?` · ${esc(d.hotel)}`:''}</div>`).join('')}
+    </div>`:''}
+    <div style="margin-top:24px;padding-top:16px;border-top:2px dashed #D8DBD3;font-size:12px;color:#6B7680;">
+      This voucher confirms arrangements made by ${esc(STATE.settings.agencyName)}. Please carry a printed or digital copy with valid photo identification.</div>
+    ${agencySignature()}</div>`;
+  printHTML(html);
+}
+
+// Daily programme message for travellers on an active trip
+function waDailyProgramme(id){
+  const b = STATE.bookings.find(x=>x.id===id); if(!b) return;
+  const it = STATE.itineraries.find(x=>x.id===b.itineraryId);
+  const s = STATE.settings;
+  const today = todayISO();
+  const day = it?.days.find(d=>d.date===today) || it?.days[0];
+  const idx = it ? it.days.findIndex(d=>d.id===day?.id) : -1;
+  const text = day
+    ? `Good morning ${b.clientName}! 🌅\n\n*Day ${idx+1} — ${fmtDate(day.date)}*\n${day.title}\n\n${day.notes||''}\n\n🏨 Stay: ${day.hotel||'—'}\n🚐 Transport: ${day.transport||'—'}\n\nPickup time: ____\nDriver: ____ (contact ____)\n\nHave a wonderful day!\n— ${s.ceoName}, ${s.agencyName}`
+    : `Good morning ${b.clientName}! Wishing you a wonderful day on your ${b.destination} trip.\n— ${s.ceoName}, ${s.agencyName}`;
+  const phone = clientPhone(b.clientName);
+  openModal({
+    title:'Daily programme message', wide:true,
+    bodyHTML:`<label class="field-label">Message</label><textarea id="wa-text" rows="12">${esc(text)}</textarea>
+      <div class="mt-3"><label class="field-label">Send to</label><input type="text" id="wa-phone" value="${esc(phone)}" placeholder="+91…"></div>
+      <p class="text-xs text-muted mt-2">Fill in the pickup time and driver details before sending.</p>`,
+    footHTML:`<div class="flex justify-end gap-2"><button class="btn btn-outline" data-action="modal-close">Cancel</button>
+      ${backendReady()?`<button class="btn btn-primary" data-action="wa-auto">Send automatically</button>`:''}<button class="btn btn-wa" id="wa-send-btn">Open in WhatsApp</button></div>`,
+    onMount:()=>{ $('#wa-send-btn').addEventListener('click', ()=>{ openWhatsApp($('#wa-phone').value, $('#wa-text').value); closeModal(); }); }
+  });
+}
+
+// =========================================================================
+// INVOICES, PAYMENTS & RECEIPTS
+// =========================================================================
+VIEWS.invoices = function(){
+  const cols=[
+    {label:'Invoice #', render:r=>`<span class="font-mono text-xs">${esc(r.invoiceNo)}</span>`},
+    {key:'clientName', label:'Client'},
+    {key:'type', label:'Type'},
+    {label:'Total', render:r=>`<span class="font-mono">${fmtMoney(r.total)}</span>`},
+    {label:'Paid', render:r=>`<span class="font-mono">${fmtMoney(invoicePaid(r))}</span>`},
+    {label:'Balance', render:r=>{const p=r.total-invoicePaid(r);
+      return `<span class="font-mono ${p>0?'text-danger':'text-success'}">${fmtMoney(Math.max(p,0))}</span>`;}},
+    {label:'', render:r=>`<div class="flex gap-1.5 justify-end flex-wrap">
+        <button class="chip-btn" data-action="record-payment" data-id="${r.id}">+ Payment</button>
+        <button class="chip-btn" data-action="print-invoice" data-id="${r.id}">Print</button>
+        <button class="chip-btn" data-action="wa-invoice" data-id="${r.id}">WA</button></div>`},
+  ];
+  const totalInv = STATE.invoices.reduce((s,i)=>s+i.total,0);
+  const totalPaid = STATE.payments.reduce((s,p)=>s+p.amount,0);
+  const receipts = [...STATE.payments].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  return `
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+      ${kpiCard('Total invoiced', fmtMoney(totalInv), STATE.invoices.length+' invoices')}
+      ${kpiCard('Total collected', fmtMoney(totalPaid), STATE.payments.length+' payments')}
+      ${kpiCard('Outstanding', fmtMoney(Math.max(0,totalInv-totalPaid)), 'across all clients')}
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">GST is applied automatically: 5% on packages, 18% on service fees.</div>
+      <button class="btn btn-primary btn-sm" data-action="new-invoice">+ New Invoice</button></div>
+    ${renderTable({columns:cols, rows:[...STATE.invoices].sort((a,b)=>b.date.localeCompare(a.date)), emptyText:'No invoices yet.'})}
+    <div class="mt-6">
+      <div class="font-display text-base font-semibold mb-3">Recent payments</div>
+      ${renderTable({columns:[
+        {label:'Receipt #', render:r=>`<span class="font-mono text-xs">${esc(r.receiptNo||'—')}</span>`},
+        {key:'clientName', label:'Client'},
+        {label:'Amount', render:r=>`<span class="font-mono">${fmtMoney(r.amount)}</span>`},
+        {key:'mode', label:'Mode'},
+        {label:'Date', render:r=>fmtDateShort(r.date)},
+        {label:'', render:r=>`<div class="flex gap-1.5 justify-end">
+          <button class="chip-btn" data-action="print-receipt" data-id="${r.id}">Receipt</button>
+          <button class="chip-btn" data-action="wa-receipt" data-id="${r.id}">WA</button></div>`},
+      ], rows:receipts, emptyText:'No payments recorded yet.'})}</div>`;
+};
+
+function newInvoiceModal(bookingId=null){
+  const booking = bookingId ? STATE.bookings.find(b=>b.id===bookingId) : null;
+  const bOpts = STATE.bookings.map(b=>({value:b.id,label:`${b.clientName} — ${b.destination}`}));
+  openFormModal({
+    title:'New invoice', wide:true, submitLabel:'Create invoice',
+    fields:[
+      bOpts.length?{name:'bookingId', label:'Link to booking (optional)', type:'select', options:[{value:'',label:'— none —'},...bOpts], value:booking?.id, full:true}:null,
+      {name:'clientName', label:'Client name', required:true, value:booking?.clientName, full:true},
+      {name:'type', label:'Invoice type', type:'select', options:INVOICE_TYPES, value:'Package Tour'},
+      {name:'gstRate', label:'GST %', type:'number', value:5, step:'0.1'},
+      {name:'amount', label:'Base amount (before GST)', type:'number', required:true, value:booking?.sellPrice},
+      {name:'date', label:'Invoice date', type:'date', value:todayISO()},
+    ],
+    onSubmit:(d)=>{
+      const gst = Math.round((d.amount||0)*(d.gstRate||0)/100);
+      STATE.invoices.push({id:uid(), invoiceNo:nextInvoiceNo(), bookingId:d.bookingId||null, clientName:d.clientName,
+        type:d.type, amount:d.amount||0, gstRate:d.gstRate||0, gstAmount:gst, total:(d.amount||0)+gst, date:d.date||todayISO()});
+      closeModal(); saveState(); render(); toast('Invoice created');
+    },
+    onMount:()=>{
+      const t=document.querySelector('select[name="type"]'), g=document.querySelector('input[name="gstRate"]');
+      t?.addEventListener('change', ()=>{ g.value = defaultGstFor(t.value); });
+    }
+  });
+}
+
+function recordPaymentModal(invId){
+  const inv = STATE.invoices.find(i=>i.id===invId); if(!inv) return;
+  const pending = inv.total - invoicePaid(inv);
+  openFormModal({
+    title:`Record payment — ${inv.invoiceNo}`, submitLabel:'Save payment',
+    fields:[
+      {name:'amount', label:`Amount (balance ${fmtMoney(Math.max(pending,0))})`, type:'number', required:true, value:Math.max(pending,0), full:true},
+      {name:'mode', label:'Mode', type:'select', options:['UPI','Cash','Bank Transfer','Credit Card','Debit Card','Cheque'], full:true},
+      {name:'reference', label:'Reference / UTR', value:'', full:true},
+      {name:'date', label:'Date', type:'date', value:todayISO(), full:true},
+    ],
+    onSubmit:(d)=>{
+      STATE.payments.push({id:uid(), receiptNo:nextReceiptNo(), invoiceId:invId, clientName:inv.clientName,
+        amount:d.amount||0, mode:d.mode, reference:d.reference||'', date:d.date||todayISO()});
+      closeModal(); saveState(); render(); toast('Payment recorded');
+    }
+  });
+}
+
+function printInvoice(id){
+  const inv = STATE.invoices.find(i=>i.id===id); if(!inv) return;
+  const paid = invoicePaid(inv), bal = inv.total-paid;
+  const html=`<div style="max-width:720px;margin:36px auto;font-family:'Public Sans',sans-serif;color:#1A2229;">
+    ${docHeader('Tax Invoice', `<strong style="color:#1A2229;font-size:14px;">${esc(inv.invoiceNo)}</strong><br>${fmtDate(inv.date)}`)}
+    <div style="font-size:11px;color:#6B7680;text-transform:uppercase;letter-spacing:.08em;">Billed to</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:18px;">${esc(inv.clientName)}</div>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr style="border-bottom:2px solid #12303D;"><td style="padding:8px 0;">Description</td><td style="padding:8px 0;text-align:right;">Amount</td></tr>
+      <tr style="border-bottom:1px solid #E1E4DF;"><td style="padding:10px 0;">${esc(inv.type)}</td><td style="padding:10px 0;text-align:right;">${fmtMoney(inv.amount)}</td></tr>
+      <tr style="border-bottom:1px solid #E1E4DF;"><td style="padding:10px 0;color:#6B7680;">GST (${inv.gstRate}%)</td><td style="padding:10px 0;text-align:right;color:#6B7680;">${fmtMoney(inv.gstAmount)}</td></tr>
+      <tr style="border-bottom:2px solid #12303D;"><td style="padding:10px 0;font-weight:700;">Total</td><td style="padding:10px 0;text-align:right;font-weight:700;">${fmtMoney(inv.total)}</td></tr>
+      <tr><td style="padding:10px 0;color:#6B7680;">Paid to date</td><td style="padding:10px 0;text-align:right;color:#2F8F5B;">${fmtMoney(paid)}</td></tr>
+      <tr><td style="padding:10px 0;font-weight:700;">Balance due</td><td style="padding:10px 0;text-align:right;font-weight:700;color:${bal>0?'#B8483D':'#2F8F5B'};">${fmtMoney(Math.max(bal,0))}</td></tr>
+    </table>${agencySignature()}</div>`;
+  printHTML(html);
+}
+
+function printReceipt(id){
+  const p = STATE.payments.find(x=>x.id===id); if(!p) return;
+  const inv = STATE.invoices.find(i=>i.id===p.invoiceId);
+  const html=`<div style="max-width:640px;margin:36px auto;font-family:'Public Sans',sans-serif;color:#1A2229;">
+    ${docHeader('Payment Receipt', `<strong style="color:#1A2229;font-size:14px;">${esc(p.receiptNo||'—')}</strong><br>${fmtDate(p.date)}`)}
+    <div style="background:#F3F5F1;border-radius:12px;padding:20px;text-align:center;margin-bottom:18px;">
+      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6B7680;">Amount received</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#1F7A6C;margin-top:4px;">${fmtMoney(p.amount)}</div></div>
+    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+      ${[['Received from',esc(p.clientName)],['Payment mode',esc(p.mode)],
+         ['Reference',esc(p.reference||'—')],['Against invoice',esc(inv?.invoiceNo||'—')],
+         ['Date',fmtDate(p.date)]].map(([k,v])=>`<tr><td style="padding:7px 0;color:#6B7680;width:170px;">${k}</td><td style="padding:7px 0;font-weight:500;">${v}</td></tr>`).join('')}
+    </table>
+    ${inv?`<div style="margin-top:14px;font-size:13px;color:#6B7680;">Balance on this invoice: <strong style="color:#1A2229;">${fmtMoney(Math.max(0,inv.total-invoicePaid(inv)))}</strong></div>`:''}
+    ${agencySignature()}</div>`;
+  printHTML(html);
+}
+
+function waInvoice(id){
+  const inv = STATE.invoices.find(i=>i.id===id); if(!inv) return;
+  const bal = inv.total-invoicePaid(inv);
+  const s=STATE.settings;
+  const text = `Hello ${inv.clientName},\n\nInvoice *${inv.invoiceNo}* dated ${fmtDate(inv.date)}\n${inv.type}: ${fmtMoney(inv.amount)}\nGST (${inv.gstRate}%): ${fmtMoney(inv.gstAmount)}\n*Total: ${fmtMoney(inv.total)}*\nPaid: ${fmtMoney(invoicePaid(inv))}\n*Balance due: ${fmtMoney(Math.max(bal,0))}*\n\nThank you.\n— ${s.ceoName}, ${s.agencyName}`;
+  quickWaModal('Send invoice on WhatsApp', text, clientPhone(inv.clientName));
+}
+function waReceipt(id){
+  const p = STATE.payments.find(x=>x.id===id); if(!p) return;
+  const s=STATE.settings;
+  const text = `Hello ${p.clientName},\n\nWe have received your payment. 🙏\n\nReceipt: *${p.receiptNo||'—'}*\nAmount: *${fmtMoney(p.amount)}*\nMode: ${p.mode}\nDate: ${fmtDate(p.date)}\n\nThank you!\n— ${s.ceoName}, ${s.agencyName}`;
+  quickWaModal('Send receipt on WhatsApp', text, clientPhone(p.clientName));
+}
+function quickWaModal(title, text, phone){
+  openModal({ title, wide:true,
+    bodyHTML:`<label class="field-label">Message</label><textarea id="wa-text" rows="10">${esc(text)}</textarea>
+      <div class="mt-3"><label class="field-label">Send to</label><input type="text" id="wa-phone" value="${esc(phone||'')}" placeholder="+91…"></div>`,
+    footHTML:`<div class="flex justify-end gap-2"><button class="btn btn-outline" data-action="modal-close">Cancel</button>
+      ${backendReady()?`<button class="btn btn-primary" data-action="wa-auto">Send automatically</button>`:''}<button class="btn btn-wa" id="wa-send-btn">Open in WhatsApp</button></div>`,
+    onMount:()=>{ $('#wa-send-btn').addEventListener('click', ()=>{ openWhatsApp($('#wa-phone').value, $('#wa-text').value); closeModal(); }); }});
+}
+
+// =========================================================================
+// VISA TRACKER (country checklists)
+// =========================================================================
+function visaCardHTML(v){
+  const done=(v.docs||[]).filter(d=>d.done).length, total=(v.docs||[]).length||1;
+  return `<div class="kanban-card ticket p-3" draggable="true" data-id="${v.id}">
+    <div class="font-medium text-sm">${esc(v.clientName)}</div>
+    <div class="text-xs text-muted mt-0.5">${esc(v.country)} · ${esc(v.visaType||'')}</div>
+    <div class="text-[11px] text-muted mt-2">Documents ${done}/${total}</div>
+    <div class="w-full h-1.5 bg-line rounded-full mt-1 overflow-hidden"><div class="h-full bg-teal" style="width:${done/total*100}%"></div></div>
+    <div class="grid grid-cols-2 gap-1.5 mt-2.5 pt-2.5 border-t border-line">
+      <button class="chip-btn" data-action="edit-visa" data-id="${v.id}">Open</button>
+      <button class="chip-btn" data-action="wa-visa" data-id="${v.id}">Checklist</button></div></div>`;
+}
+VIEWS.visa = function(){
+  setTimeout(()=>wireKanbanDnD($('#view'), (id,stage)=>{
+    const v=STATE.visaCases.find(x=>x.id===id); if(!v) return;
+    v.stage=stage; saveState(); render(); toast(`${v.clientName}'s case moved to ${stage}`); }),0);
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">${STATE.visaCases.length} visa cases. Checklists load automatically by country.</div>
+      <button class="btn btn-primary btn-sm" data-action="new-visa">+ New Visa Case</button></div>
+    ${renderKanban({stages:VISA_STAGES, items:STATE.visaCases, renderCard:visaCardHTML})}`;
+};
+
+function visaModal(id=null){
+  const v = id ? STATE.visaCases.find(x=>x.id===id) : null;
+  const countries = Object.keys(VISA_CHECKLISTS);
+  const docsFor = (c) => (VISA_CHECKLISTS[c]||VISA_CHECKLISTS['Other / Custom']).map(l=>({label:l, done:false}));
+  const currentDocs = v ? (v.docs||[]) : docsFor(countries[0]);
+  const docsHTML = (docs) => docs.map((d,i)=>`
+    <label class="flex items-start gap-2 text-sm mb-2">
+      <input type="checkbox" data-doc="${i}" class="w-4 h-4 mt-0.5 shrink-0" ${d.done?'checked':''}>
+      <span>${esc(d.label)}</span></label>`).join('');
+
+  openModal({
+    title: v?'Visa case':'New visa case', wide:true,
+    bodyHTML:`<form id="generic-form" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+        ${fieldHTML({name:'clientName', label:'Client name', required:true, value:v?.clientName, full:true})}
+        ${fieldHTML({name:'phone', label:'Phone', value:v?.phone})}
+        <div class="sm:col-span-2 mb-3 flex items-center gap-2">
+          ${backendReady()?`<button type="button" class="btn btn-outline btn-sm" id="scan-passport-btn">📷 Scan passport</button>
+            <span class="text-[11px] text-muted">Reads name, passport no., DOB, expiry and nationality from a photo.</span>`
+            :`<span class="text-[11px] text-muted">Passport scanning is available once the backend is connected in Settings.</span>`}
+        </div>
+        ${fieldHTML({name:'passportNo', label:'Passport number', value:v?.passportNo})}
+        ${fieldHTML({name:'nationality', label:'Nationality', value:v?.nationality})}
+        ${fieldHTML({name:'dob', label:'Date of birth', type:'date', value:v?.dob})}
+        ${fieldHTML({name:'passportExpiry', label:'Passport expiry', type:'date', value:v?.passportExpiry})}
+        ${fieldHTML({name:'country', label:'Destination country', type:'select', options:countries, value:v?.country||countries[0]})}
+        ${fieldHTML({name:'visaType', label:'Visa type', value:v?.visaType})}
+        ${fieldHTML({name:'appliedOn', label:'Applied on', type:'date', value:v?.appliedOn})}
+        ${fieldHTML({name:'stage', label:'Stage', type:'select', options:VISA_STAGES.map(s=>s.key), value:v?.stage||'Document Collected'})}
+        ${fieldHTML({name:'notes', label:'Notes', type:'textarea', value:v?.notes, full:true})}
+        <div class="sm:col-span-2">
+          <label class="field-label">Document checklist</label>
+          <div id="visa-docs">${docsHTML(currentDocs)}</div>
+          <button type="button" class="chip-btn mt-1" id="reload-docs-btn">Reload checklist for selected country</button>
+        </div></form>`,
+    footHTML:`<div class="flex items-center justify-between gap-2">
+        <div>${v?`<button type="button" class="btn btn-danger btn-sm" id="del-visa-btn">Delete</button>`:''}</div>
+        <div class="flex gap-2"><button type="button" class="btn btn-outline" data-action="modal-close">Cancel</button>
+        <button type="submit" form="generic-form" class="btn btn-primary">${v?'Save changes':'Create case'}</button></div></div>`,
+    onMount:()=>{
+      let docs = currentDocs.map(d=>({...d}));
+      const rebind = () => {
+        $('#visa-docs').innerHTML = docsHTML(docs);
+        $$('#visa-docs input[type=checkbox]').forEach(cb=>cb.addEventListener('change', ()=>{ docs[Number(cb.dataset.doc)].done = cb.checked; }));
+      };
+      rebind();
+      $('#scan-passport-btn')?.addEventListener('click', async ()=>{
+        const file = await pickImage(); if(!file) return;
+        const b=$('#scan-passport-btn'); b.disabled=true; b.textContent='Reading…';
+        try{
+          const r = await callBackend('ocr_passport', { image: await fileToBase64(file), mediaType: file.type||'image/jpeg' });
+          const f = r.fields||{};
+          const set=(n,v)=>{ const el=document.querySelector(`[name="${n}"]`); if(el && v) el.value=v; };
+          set('clientName', f.fullName); set('passportNo', f.passportNumber); set('nationality', f.nationality);
+          set('dob', f.dateOfBirth); set('passportExpiry', f.expiryDate);
+          toast('Passport details filled — please verify against the document');
+        }catch(err){ console.error(err); toast('Could not read the passport image','err'); }
+        finally{ b.disabled=false; b.textContent='📷 Scan passport'; }
+      });
+      $('#reload-docs-btn').addEventListener('click', ()=>{
+        docs = docsFor(document.querySelector('select[name="country"]').value); rebind(); });
+      $('#generic-form').addEventListener('submit', e=>{
+        e.preventDefault();
+        const fd=new FormData(e.target);
+        const data={clientName:fd.get('clientName'), phone:fd.get('phone'), country:fd.get('country'),
+          visaType:fd.get('visaType'), appliedOn:fd.get('appliedOn'), stage:fd.get('stage'), notes:fd.get('notes'), docs,
+          passportNo:fd.get('passportNo'), nationality:fd.get('nationality'), dob:fd.get('dob'), passportExpiry:fd.get('passportExpiry')};
+        if(v) Object.assign(v,data); else STATE.visaCases.push({id:uid(), ...data});
+        closeModal(); saveState(); render(); toast(v?'Visa case updated':'Visa case created');
+      });
+      $('#del-visa-btn')?.addEventListener('click', ()=>{ closeModal();
+        confirmDialog('Delete this visa case?', ()=>{ STATE.visaCases=STATE.visaCases.filter(x=>x.id!==id); saveState(); render(); toast('Visa case deleted'); }); });
+    }
+  });
+}
+function waVisaChecklist(id){
+  const v = STATE.visaCases.find(x=>x.id===id); if(!v) return;
+  const s = STATE.settings;
+  const pending = (v.docs||[]).filter(d=>!d.done);
+  const text = `Hello ${v.clientName},\n\nFor your *${v.country}* visa application, we still need:\n\n${pending.map(d=>`☐ ${d.label}`).join('\n') || 'Nothing — all documents received. ✅'}\n\nPlease share these at your convenience so we can proceed.\n\n— ${s.ceoName}, ${s.agencyName}`;
+  quickWaModal('Send visa checklist', text, v.phone || clientPhone(v.clientName));
+}
+
+// =========================================================================
+// CORPORATE ACCOUNTS
+// =========================================================================
+VIEWS.corporate = function(id){
+  if(id) return renderCompanyDetail(id);
+  const cols=[
+    {key:'name', label:'Company'},
+    {key:'contactPerson', label:'Contact'},
+    {key:'phone', label:'Phone'},
+    {label:'Employees', render:r=>(r.employees||[]).length},
+    {label:'Bookings', render:r=>STATE.bookings.filter(b=>b.companyId===r.id).length},
+    {label:'', render:r=>`<div class="flex gap-1.5 justify-end">
+      <button class="chip-btn" data-action="open-company" data-id="${r.id}">Open</button>
+      <button class="chip-btn" data-action="edit-company" data-id="${r.id}">Edit</button></div>`},
+  ];
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">${STATE.companies.length} corporate accounts.</div>
+      <button class="btn btn-primary btn-sm" data-action="new-company">+ New Company</button></div>
+    ${renderTable({columns:cols, rows:STATE.companies, emptyText:'No corporate accounts yet.'})}`;
+};
+function renderCompanyDetail(id){
+  const c = STATE.companies.find(x=>x.id===id);
+  if(!c) return `<button class="text-teal font-semibold text-sm" data-action="nav" data-view="corporate">← Back</button>`;
+  const bookings = STATE.bookings.filter(b=>b.companyId===c.id);
+  return `<button class="text-sm text-teal font-semibold mb-4" data-action="nav" data-view="corporate">← All companies</button>
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-xl font-semibold">${esc(c.name)}</div>
+      <div class="text-sm text-muted mt-1">${esc(c.contactPerson||'')} ${c.phone?'· '+esc(c.phone):''} ${c.email?'· '+esc(c.email):''}</div>
+      ${c.gstNumber?`<div class="text-xs text-muted mt-1 font-mono">GSTIN ${esc(c.gstNumber)}</div>`:''}
+      <div class="flex gap-2 mt-4"><button class="btn btn-outline btn-sm" data-action="edit-company" data-id="${c.id}">Edit company</button>
+        <button class="btn btn-primary btn-sm" data-action="add-employee" data-id="${c.id}">+ Add employee</button></div>
+    </div>
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-3">Employees / travellers</div>
+      ${(c.employees||[]).length ? `<div class="flex flex-col divide-y divide-line">
+        ${c.employees.map(e=>`<div class="py-2.5 flex items-center justify-between gap-2 text-sm">
+          <div><div class="font-medium">${esc(e.name)}</div><div class="text-xs text-muted">${esc(e.designation||'')} ${e.phone?'· '+esc(e.phone):''}</div></div>
+          <div class="flex gap-1.5">
+            <button class="chip-btn" data-action="employee-lead" data-id="${c.id}" data-emp="${e.id}">New trip</button>
+            <button class="chip-btn" data-action="remove-employee" data-id="${c.id}" data-emp="${e.id}">Remove</button></div>
+        </div>`).join('')}</div>` : '<div class="text-sm text-muted py-3">No employees added yet.</div>'}
+    </div>
+    <div class="ticket p-5">
+      <div class="font-display text-base font-semibold mb-3">Company bookings</div>
+      ${bookings.length ? `<div class="flex flex-col divide-y divide-line text-sm">
+        ${bookings.map(b=>`<div class="py-2 flex justify-between"><span>${esc(b.clientName)} — ${esc(b.destination)}</span>
+          <span class="font-mono text-xs">${fmtDateShort(b.startDate)}</span></div>`).join('')}</div>`
+        : '<div class="text-sm text-muted py-3">No bookings linked to this company yet.</div>'}
+    </div>`;
+}
+function companyModal(id=null){
+  const c = id ? STATE.companies.find(x=>x.id===id) : null;
+  openFormModal({
+    title: c?'Edit company':'New corporate account', wide:true, submitLabel:'Save',
+    extraFootLeft: c?`<button type="button" class="btn btn-danger btn-sm" id="del-co-btn">Delete</button>`:'',
+    fields:[
+      {name:'name', label:'Company name', required:true, value:c?.name, full:true},
+      {name:'contactPerson', label:'Contact person', value:c?.contactPerson},
+      {name:'phone', label:'Phone', value:c?.phone},
+      {name:'email', label:'Email', type:'email', value:c?.email},
+      {name:'gstNumber', label:'GSTIN', value:c?.gstNumber},
+      {name:'address', label:'Address', type:'textarea', value:c?.address, full:true},
+    ],
+    onSubmit:(d)=>{
+      if(c) Object.assign(c,d); else STATE.companies.push({id:uid(), employees:[], ...d});
+      closeModal(); saveState(); render(); toast('Company saved');
+    },
+    onMount:()=>{ $('#del-co-btn')?.addEventListener('click', ()=>{ closeModal();
+      confirmDialog('Delete this company account?', ()=>{ STATE.companies=STATE.companies.filter(x=>x.id!==id); saveState(); navigate('corporate'); toast('Company deleted'); }); }); }
+  });
+}
+function employeeModal(companyId){
+  const c = STATE.companies.find(x=>x.id===companyId); if(!c) return;
+  openFormModal({ title:`Add employee — ${esc(c.name)}`, wide:true, submitLabel:'Add employee',
+    fields:[
+      {name:'name', label:'Employee name', required:true, full:true},
+      {name:'designation', label:'Designation'},
+      {name:'phone', label:'Phone'},
+      {name:'email', label:'Email', type:'email', full:true},
+    ],
+    onSubmit:(d)=>{ c.employees=c.employees||[]; c.employees.push({id:uid(), ...d});
+      closeModal(); saveState(); render(); toast('Employee added'); }});
+}
+
+// =========================================================================
+// TASKS / VENDORS / CLIENTS / FEEDBACK
+// =========================================================================
+let taskFilter='all';
+VIEWS.tasks = function(){
+  let rows=[...STATE.tasks];
+  if(taskFilter==='today') rows=rows.filter(t=>!t.done&&t.dueDate===todayISO());
+  if(taskFilter==='overdue') rows=rows.filter(t=>!t.done&&t.dueDate<todayISO());
+  if(taskFilter==='done') rows=rows.filter(t=>t.done);
+  rows.sort((a,b)=>(a.done-b.done)||a.dueDate.localeCompare(b.dueDate));
+  const cols=[
+    {label:'', render:r=>`<input type="checkbox" class="w-4 h-4" data-action="toggle-task" data-id="${r.id}" ${r.done?'checked':''}>`},
+    {label:'Task', render:r=>`<span class="${r.done?'line-through text-muted':''}">${esc(r.title)}</span>`},
+    {key:'assignee', label:'Assignee'},
+    {key:'relatedTo', label:'Related to'},
+    {label:'Due', render:r=>{const o=!r.done&&r.dueDate<todayISO(); return `<span class="${o?'text-danger font-semibold':''}">${fmtDateShort(r.dueDate)}</span>`;}},
+    {label:'', render:r=>`<div class="flex justify-end"><button class="chip-btn" data-action="edit-task" data-id="${r.id}">Edit</button></div>`},
+  ];
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex gap-2 flex-wrap">
+        ${[['all','All'],['today','Due today'],['overdue','Overdue'],['done','Completed']]
+          .map(([k,l])=>`<button class="chip-btn ${taskFilter===k?'active':''}" data-action="task-filter" data-filter="${k}">${l}</button>`).join('')}
+      </div>
+      <button class="btn btn-primary btn-sm" data-action="new-task">+ New Task</button></div>
+    ${renderTable({columns:cols, rows, emptyText:'No tasks match this filter.'})}`;
+};
+function taskModal(id=null){
+  const t = id?STATE.tasks.find(x=>x.id===id):null;
+  openFormModal({ title:t?'Edit task':'New task', wide:true, submitLabel:t?'Save changes':'Create task',
+    extraFootLeft:t?`<button type="button" class="btn btn-danger btn-sm" id="del-task-btn">Delete</button>`:'',
+    fields:[
+      {name:'title', label:'Task', required:true, value:t?.title, full:true},
+      {name:'assignee', label:'Assignee', type:'select', options:teamNames(), value:t?.assignee||STATE.settings.ceoName},
+      {name:'dueDate', label:'Due date', type:'date', value:t?.dueDate||todayISO()},
+      {name:'relatedTo', label:'Related to', value:t?.relatedTo, full:true},
+      {name:'done', label:'Completed', type:'checkbox', value:t?.done},
+    ],
+    onSubmit:(d)=>{ if(t) Object.assign(t,d); else STATE.tasks.push({id:uid(), done:false, ...d});
+      closeModal(); saveState(); render(); toast('Task saved'); },
+    onMount:()=>{ $('#del-task-btn')?.addEventListener('click', ()=>{ closeModal();
+      STATE.tasks=STATE.tasks.filter(x=>x.id!==id); saveState(); render(); toast('Task deleted'); }); }});
+}
+function toggleTask(id, checked){
+  const t=STATE.tasks.find(x=>x.id===id); if(!t) return; t.done=checked; saveState(); render();
+}
+
+const VENDOR_CATEGORIES=['Hotel','Transport','DMC','Guide','Airline','Restaurant','Activity','Visa Agent','Other'];
+VIEWS.vendors = function(){
+  const cols=[
+    {key:'name', label:'Vendor'},
+    {label:'Category', render:r=>`<span class="pill bg-navy/10 text-navy">${esc(r.category)}</span>`},
+    {key:'city', label:'City / country'},
+    {key:'contact', label:'Contact'},
+    {key:'phone', label:'Phone'},
+    {label:'', render:r=>`<div class="flex gap-1.5 justify-end">
+      ${r.phone?`<a class="chip-btn" href="${waLink(r.phone,'Hello '+(r.contact||r.name)+', this is '+STATE.settings.agencyName+'.')}" target="_blank">WA</a>`:''}
+      <button class="chip-btn" data-action="edit-vendor" data-id="${r.id}">Edit</button></div>`},
+  ];
+  return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">${STATE.vendors.length} vendors on file.</div>
+      <div class="flex gap-2">
+        ${backendReady()?`<button class="btn btn-outline btn-sm" data-action="scan-card">📷 Scan business card</button>`:''}
+        <button class="btn btn-primary btn-sm" data-action="new-vendor">+ New Vendor</button></div></div>
+    ${renderTable({columns:cols, rows:STATE.vendors, emptyText:'No vendors added yet.'})}`;
+};
+async function scanBusinessCard(){
+  const file = await pickImage(); if(!file) return;
+  toast('Reading card…');
+  try{
+    const r = await callBackend('ocr_card', { image: await fileToBase64(file), mediaType: file.type||'image/jpeg' });
+    const f = r.fields||{};
+    vendorModal(null, {name:f.company||f.name||'', contact:f.name||'', phone:f.phone||'', email:f.email||'',
+      city:f.city||'', notes:[f.designation, f.website, f.address].filter(Boolean).join(' · ')});
+  }catch(err){ console.error(err); toast('Could not read the card image','err'); }
+}
+function vendorModal(id=null, prefill=null){
+  const v=id?STATE.vendors.find(x=>x.id===id):(prefill||null);
+  openFormModal({ title:id?'Edit vendor':'New vendor', wide:true, submitLabel:'Save',
+    extraFootLeft:id?`<button type="button" class="btn btn-danger btn-sm" id="del-vn-btn">Delete</button>`:'',
+    fields:[
+      {name:'name', label:'Vendor / business name', required:true, value:v?.name, full:true},
+      {name:'category', label:'Category', type:'select', options:VENDOR_CATEGORIES, value:v?.category||'Hotel'},
+      {name:'city', label:'City / country', value:v?.city},
+      {name:'contact', label:'Contact person', value:v?.contact},
+      {name:'phone', label:'Phone', value:v?.phone},
+      {name:'email', label:'Email', type:'email', value:v?.email},
+      {name:'notes', label:'Notes', type:'textarea', value:v?.notes, full:true},
+    ],
+    onSubmit:(d)=>{ if(id) Object.assign(v,d); else STATE.vendors.push({id:uid(), ...d});
+      closeModal(); saveState(); render(); toast('Vendor saved'); },
+    onMount:()=>{ $('#del-vn-btn')?.addEventListener('click', ()=>{ closeModal();
+      STATE.vendors=STATE.vendors.filter(x=>x.id!==id); saveState(); render(); toast('Vendor deleted'); }); }});
+}
+
+VIEWS.clients = function(id){
+  if(id) return renderClientDetail(id);
+  const names=new Set([...STATE.leads.map(l=>l.name), ...STATE.bookings.map(b=>b.clientName)]);
+  const rows=[...names].map(n=>({
+    id:n, name:n, phone:clientPhone(n),
+    bookings:STATE.bookings.filter(b=>b.clientName===n).length,
+    spend:STATE.invoices.filter(i=>i.clientName===n).reduce((s,i)=>s+i.total,0)
+  })).sort((a,b)=>b.spend-a.spend);
+  const cols=[
+    {key:'name', label:'Client'}, {key:'phone', label:'Phone'}, {key:'bookings', label:'Bookings'},
+    {label:'Lifetime spend', render:r=>`<span class="font-mono">${fmtMoney(r.spend)}</span>`},
+    {label:'', render:r=>`<div class="flex justify-end"><button class="chip-btn" data-action="open-client" data-id="${encodeURIComponent(r.name)}">Ledger</button></div>`},
+  ];
+  return `<div class="text-sm text-muted mb-4">${rows.length} clients, built automatically from leads and bookings.</div>
+    ${renderTable({columns:cols, rows, emptyText:'No clients yet.'})}`;
+};
+function renderClientDetail(enc){
+  const name=decodeURIComponent(enc);
+  const lead=STATE.leads.find(l=>l.name===name);
+  const bookings=STATE.bookings.filter(b=>b.clientName===name);
+  const invs=STATE.invoices.filter(i=>i.clientName===name);
+  const pays=STATE.payments.filter(p=>p.clientName===name);
+  const rows=[...invs.map(i=>({date:i.date,desc:`Invoice ${i.invoiceNo} — ${i.type}`,debit:i.total,credit:0})),
+              ...pays.map(p=>({date:p.date,desc:`Payment received (${p.mode})`,debit:0,credit:p.amount}))]
+              .sort((a,b)=>a.date.localeCompare(b.date));
+  let bal=0; const led=rows.map(r=>{ bal+=r.debit-r.credit; return {...r,bal}; });
+  return `<button class="text-sm text-teal font-semibold mb-4" data-action="nav" data-view="clients">← All clients</button>
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-xl font-semibold">${esc(name)}</div>
+      <div class="text-sm text-muted mt-1">${esc(lead?.phone||'')}${lead?.email?' · '+esc(lead.email):''}</div>
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-wa btn-sm" data-action="wa-client" data-id="${encodeURIComponent(name)}">WhatsApp</button>
+        <button class="btn btn-outline btn-sm" data-action="request-feedback" data-id="${encodeURIComponent(name)}">Request feedback</button></div>
+    </div>
+    <div class="ticket p-5 mb-5"><div class="font-display text-base font-semibold mb-3">Bookings</div>
+      <div class="flex flex-col divide-y divide-line text-sm">
+        ${bookings.map(b=>`<div class="py-2 flex justify-between gap-2"><span>${esc(b.destination)} — ${fmtDateShort(b.startDate)}</span>
+          <span class="pill" style="background:${bookingStatusColor(b.status)}22;color:${bookingStatusColor(b.status)}">${esc(b.status)}</span></div>`).join('')
+          || '<div class="text-muted py-2">No bookings yet.</div>'}</div></div>
+    <div class="ticket p-5"><div class="font-display text-base font-semibold mb-3">Client ledger</div>
+      ${led.length?`<div class="overflow-x-auto"><table class="w-full text-sm min-w-[560px]">
+        <thead><tr class="text-left board-label text-[10px] text-muted border-b border-line">
+          <th class="py-2">Date</th><th class="py-2">Description</th><th class="py-2 text-right">Invoiced</th>
+          <th class="py-2 text-right">Paid</th><th class="py-2 text-right">Balance</th></tr></thead>
+        <tbody>${led.map(r=>`<tr class="border-b border-line last:border-0">
+          <td class="py-2">${fmtDateShort(r.date)}</td><td class="py-2">${esc(r.desc)}</td>
+          <td class="py-2 text-right font-mono">${r.debit?fmtMoney(r.debit):'—'}</td>
+          <td class="py-2 text-right font-mono text-success">${r.credit?fmtMoney(r.credit):'—'}</td>
+          <td class="py-2 text-right font-mono font-semibold">${fmtMoney(r.bal)}</td></tr>`).join('')}</tbody></table></div>`
+        :`<div class="text-sm text-muted py-6 text-center">No transactions yet.</div>`}</div>`;
+}
+
+// ---------- Feedback ----------
+VIEWS.feedback = function(){
+  const fb=[...STATE.feedback].sort((a,b)=>b.date.localeCompare(a.date));
+  const avg = fb.length ? (fb.reduce((s,f)=>s+f.rating,0)/fb.length).toFixed(1) : '—';
+  const stars = n => '★'.repeat(n)+'☆'.repeat(5-n);
+  const cols=[
+    {key:'clientName', label:'Client'},
+    {label:'Rating', render:r=>`<span class="text-gold text-base">${stars(r.rating)}</span>`},
+    {key:'comment', label:'Comment'},
+    {label:'Date', render:r=>fmtDateShort(r.date)},
+    {label:'', render:r=>r.rating>=4 && STATE.settings.googleReviewUrl
+      ? `<div class="flex justify-end"><button class="chip-btn" data-action="wa-review" data-id="${r.id}">Ask for Google review</button></div>` : ''},
+  ];
+  return `<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+      ${kpiCard('Average rating', avg, `${fb.length} reviews collected`)}
+      ${kpiCard('4★ and above', fb.filter(f=>f.rating>=4).length, 'eligible for a Google review request')}
+      ${kpiCard('Below 4★', fb.filter(f=>f.rating<4).length, 'needs a follow-up call')}
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="text-sm text-muted">Log post-trip feedback. Clients rating 4★+ get a one-tap Google review request.</div>
+      <div class="flex gap-2">
+        ${SYNC==='online'?`<button class="btn btn-outline btn-sm" data-action="fetch-feedback">Fetch web feedback</button>`:''}
+        <button class="btn btn-primary btn-sm" data-action="new-feedback">+ Log Feedback</button></div></div>
+    ${renderTable({columns:cols, rows:fb, emptyText:'No feedback logged yet.'})}
+    ${!STATE.settings.googleReviewUrl?`<div class="text-xs text-muted mt-3">Add your Google review link in Settings to enable one-tap review requests.</div>`:''}`;
+};
+function feedbackModal(prefillName=''){
+  openFormModal({ title:'Log client feedback', wide:true, submitLabel:'Save feedback',
+    fields:[
+      {name:'clientName', label:'Client name', required:true, value:prefillName, full:true},
+      {name:'rating', label:'Rating (1–5)', type:'number', value:5},
+      {name:'date', label:'Date', type:'date', value:todayISO()},
+      {name:'comment', label:'Comment', type:'textarea', full:true},
+    ],
+    onSubmit:(d)=>{
+      const rating = Math.min(5, Math.max(1, Number(d.rating)||5));
+      STATE.feedback.push({id:uid(), clientName:d.clientName, rating, comment:d.comment, date:d.date||todayISO(), bookingId:null});
+      closeModal(); saveState(); render();
+      if(rating>=4 && STATE.settings.googleReviewUrl) toast('Great rating — send them the Google review link');
+      else toast('Feedback saved');
+    }});
+}
+function waReviewRequest(id){
+  const f=STATE.feedback.find(x=>x.id===id); if(!f) return;
+  const s=STATE.settings;
+  const text=`Hello ${f.clientName},\n\nThank you so much for the ${f.rating}★ feedback — it means a lot to our small team. 🙏\n\nIf you have a moment, would you mind sharing it as a Google review? It genuinely helps other travellers find us:\n${s.googleReviewUrl}\n\nWarm regards,\n${s.ceoName}\n${s.agencyName}`;
+  quickWaModal('Request a Google review', text, clientPhone(f.clientName));
+}
+function feedbackLink(name){
+  const s=STATE.settings;
+  const q = new URLSearchParams({ c:name, a:s.agencyName, g:s.googleReviewUrl||'' });
+  return publicBase()+'feedback.html?'+q.toString();
+}
+function requestFeedback(enc){
+  const name=decodeURIComponent(enc), s=STATE.settings;
+  const link = feedbackLink(name);
+  const text=`Hello ${name},\n\nWe hope you had a wonderful trip! 🌏\n\nIt would mean a lot if you could rate your experience — it takes 30 seconds:\n${link}\n\nWarm regards,\n${s.ceoName}\n${s.agencyName}`;
+  quickWaModal('Request post-trip feedback', text, clientPhone(name));
+}
+async function fetchWebFeedback(){
+  if(SYNC!=='online'){ toast('Connect team sync first','warn'); return; }
+  try{
+    const { data, error } = await SB.from('feedback_public').select('*').eq('imported', false);
+    if(error) throw error;
+    if(!data || !data.length){ toast('No new web feedback'); return; }
+    for(const f of data){
+      STATE.feedback.push({id:uid(), clientName:f.client_name||'Website visitor', rating:Number(f.rating)||0,
+        comment:f.comment||'', date:(f.created_at||'').slice(0,10)||todayISO(), bookingId:null});
+      await SB.from('feedback_public').update({imported:true}).eq('id', f.id);
+    }
+    saveState(); render(); toast(`${data.length} feedback entr${data.length===1?'y':'ies'} imported`);
+  }catch(err){ console.error(err); toast('Could not fetch feedback — run the setup SQL for feedback_public','err'); }
+}
+
+// =========================================================================
+// SETTINGS (agency, team, integrations, backup)
+// =========================================================================
+VIEWS.settings = function(){
+  const s=STATE.settings;
+  return `<div class="max-w-3xl">
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-3">Agency details</div>
+      <form id="settings-form" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+        ${fieldHTML({name:'agencyName', label:'Agency name', value:s.agencyName, full:true, required:true})}
+        ${fieldHTML({name:'ceoName', label:'CEO name', value:s.ceoName, required:true})}
+        ${fieldHTML({name:'agencyPhone', label:'WhatsApp number (with country code)', value:s.agencyPhone, placeholder:'+91 98xxx xxxxx'})}
+        ${fieldHTML({name:'agencyEmail', label:'Email', type:'email', value:s.agencyEmail})}
+        ${fieldHTML({name:'website', label:'Website', type:'url', value:s.website})}
+        ${fieldHTML({name:'agencyAddress', label:'Address', type:'textarea', value:s.agencyAddress, full:true})}
+        ${fieldHTML({name:'gstNumber', label:'GSTIN', value:s.gstNumber})}
+        ${fieldHTML({name:'currency', label:'Currency symbol', value:s.currency})}
+        ${fieldHTML({name:'invoicePrefix', label:'Invoice prefix', value:s.invoicePrefix})}
+        ${fieldHTML({name:'receiptPrefix', label:'Receipt prefix', value:s.receiptPrefix})}
+        ${fieldHTML({name:'financialYear', label:'Financial year', value:s.financialYear})}
+        ${fieldHTML({name:'logoUrl', label:'Logo image URL', type:'url', value:s.logoUrl, hint:'Appears on invoices, vouchers and proposals'})}
+        ${fieldHTML({name:'googleReviewUrl', label:'Google review link', type:'url', value:s.googleReviewUrl, full:true,
+          hint:'From Google Business Profile → Ask for reviews. Used for 4★+ review requests.'})}
+      </form>
+      <button class="btn btn-primary btn-sm mt-2" data-action="save-settings">Save details</button>
+    </div>
+
+    <div class="ticket p-5 mb-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-display text-base font-semibold">Team members</div>
+        <button class="btn btn-outline btn-sm" data-action="add-team">+ Add member</button></div>
+      <div class="flex flex-col divide-y divide-line">
+        ${s.team.map(t=>`<div class="py-2.5 flex items-center justify-between text-sm">
+          <div><span class="font-medium">${esc(t.name)}</span><span class="text-muted"> — ${esc(t.role)}</span></div>
+          ${s.team.length>1?`<button class="chip-btn" data-action="remove-team" data-id="${t.id}">Remove</button>`:''}
+        </div>`).join('')}</div>
+      <p class="text-xs text-muted mt-3">Team members appear as lead owners and task assignees, and drive the workload chart.</p>
+    </div>
+
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-1">Team sync & web inquiry form</div>
+      <p class="text-xs text-muted mb-3">Connect a free Supabase project to get team login, multi-device sync, and automatic lead capture from your website form. Leave blank to keep everything on this device only.</p>
+      <form id="integrations-form" class="grid grid-cols-1 gap-x-4">
+        ${fieldHTML({name:'supabaseUrl', label:'Supabase project URL', type:'url', value:CONFIG.supabaseUrl, placeholder:'https://xxxx.supabase.co'})}
+        ${fieldHTML({name:'supabaseAnonKey', label:'Supabase anon (public) key', value:CONFIG.supabaseAnonKey, placeholder:'eyJhbGciOi...'})}
+        ${fieldHTML({name:'backendUrl', label:'Backend function URL (AI, scanning, WhatsApp auto-send)', type:'url', value:CONFIG.backendUrl,
+          placeholder:'https://xxxx.supabase.co/functions/v1/btw-backend', hint:'Deploy the btw-backend function from the setup guide, then paste its URL.'})}
+        ${fieldHTML({name:'mapsApiKey', label:'Google Maps API key (auto distances)', value:CONFIG.mapsApiKey,
+          hint:'Restrict this key to your domain in Google Cloud Console → it is safe to use in the browser.'})}
+      </form>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-primary btn-sm" data-action="save-integrations">Save & connect</button>
+        ${SYNC==='online'?`<button class="btn btn-outline btn-sm" data-action="pull-cloud">Pull latest from cloud</button>
+          <button class="btn btn-outline btn-sm" data-action="sign-out">Sign out</button>`:''}
+        <button class="btn btn-outline btn-sm" data-action="show-sql">Show setup SQL</button>
+      </div>
+      <div class="text-xs text-muted mt-3">Public pages served from this site: <span class="font-mono">${esc(publicBase())}inquiry-form.html</span>, <span class="font-mono">view-itinerary.html</span>, <span class="font-mono">feedback.html</span> — configure them once in <span class="font-mono">public-config.js</span>.</div>
+      <div class="text-xs mt-2 ${SYNC==='online'?'text-success':'text-muted'}">
+        ${SYNC==='online'?'✓ Connected — changes sync to your team automatically.':'Not connected — data stays on this device.'}</div>
+    </div>
+
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-2">Backup</div>
+      <p class="text-xs text-muted mb-3">Export a JSON backup regularly, especially if you are not using team sync.</p>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-outline btn-sm" data-action="export-data">Export backup (.json)</button>
+        <label class="btn btn-outline btn-sm cursor-pointer">Import backup<input type="file" accept="application/json" id="import-file" class="hidden"></label>
+        <button class="btn btn-danger btn-sm" data-action="reset-data">Reset all data</button></div>
+    </div>
+
+    <div class="ticket p-5">
+      <div class="font-display text-base font-semibold mb-2">Feature status</div>
+      <ul class="text-xs text-muted list-disc pl-4 space-y-1.5">
+        <li><strong class="text-ink">Tap-to-send WhatsApp, proposals, flyers, invoices, receipts, visa checklists</strong> — working now, no accounts needed.</li>
+        <li><strong class="text-ink">Team login, multi-device sync, web inquiry form, public itinerary links, public feedback page</strong> — built; needs the free Supabase project (steps above).</li>
+        <li><strong class="text-ink">AI itineraries on this site, passport & business-card scanning, WhatsApp automatic sending</strong> — built; needs the backend function deployed with an Anthropic API key and (for auto-send) a WhatsApp Business API token. ${backendReady()?'<span class="text-success font-semibold">Connected ✓</span>':'<span class="text-gold font-semibold">Not connected</span>'}</li>
+        <li><strong class="text-ink">Automatic distances & travel times</strong> — built; needs a Google Maps API key. ${CONFIG.mapsApiKey?'<span class="text-success font-semibold">Key saved ✓</span>':'<span class="text-gold font-semibold">No key</span>'}</li>
+      </ul>
+    </div>
+  </div>`;
+};
+
+function saveSettingsFromForm(){
+  const fd=new FormData($('#settings-form'));
+  ['agencyName','ceoName','agencyPhone','agencyEmail','website','agencyAddress','gstNumber',
+   'currency','invoicePrefix','receiptPrefix','financialYear','logoUrl','googleReviewUrl']
+    .forEach(k=>{ const v=fd.get(k); if(v!==null) STATE.settings[k]=v; });
+  saveState(); render(); toast('Agency details saved');
+}
+function addTeamModal(){
+  openFormModal({ title:'Add team member', submitLabel:'Add',
+    fields:[{name:'name', label:'Name', required:true, full:true},
+            {name:'role', label:'Role', full:true, value:'Operations'}],
+    onSubmit:(d)=>{ STATE.settings.team.push({id:uid(), ...d}); closeModal(); saveState(); render(); toast('Team member added'); }});
+}
+
+async function saveIntegrations(){
+  const fd=new FormData($('#integrations-form'));
+  CONFIG.supabaseUrl = (fd.get('supabaseUrl')||'').trim().replace(/\/$/,'');
+  CONFIG.supabaseAnonKey = (fd.get('supabaseAnonKey')||'').trim();
+  CONFIG.backendUrl = (fd.get('backendUrl')||'').trim();
+  CONFIG.mapsApiKey = (fd.get('mapsApiKey')||'').trim();
+  await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
+  if(!CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey){
+    SB=null; SESSION=null; SYNC='local'; render(); toast('Disconnected — working on this device only');
+    return;
+  }
+  if(!initSupabaseClient()){ toast('Could not initialise Supabase with those values','err'); return; }
+  showAuthGate();
+}
+
+function showSqlSetup(){
+  const sql = `-- Run this once in Supabase → SQL Editor
+
+create table if not exists crm_state (
+  id int primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+create table if not exists inquiries (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  name text, phone text, email text,
+  destination text, pax int, travel_date date,
+  message text, imported boolean default false
+);
+
+alter table crm_state enable row level security;
+alter table inquiries enable row level security;
+
+-- Only signed-in team members can read/write the CRM
+create policy "team read"  on crm_state for select to authenticated using (true);
+create policy "team write" on crm_state for insert to authenticated with check (true);
+create policy "team update" on crm_state for update to authenticated using (true);
+
+-- The public website form may only INSERT enquiries (it cannot read them)
+create policy "public submit" on inquiries for insert to anon with check (true);
+create policy "team read inq" on inquiries for select to authenticated using (true);
+create policy "team upd inq"  on inquiries for update to authenticated using (true);
+
+-- Public itinerary pages (read-only by link token)
+create table if not exists shared_itineraries (
+  token text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table shared_itineraries enable row level security;
+create policy "public view by token" on shared_itineraries for select to anon using (true);
+create policy "team publish" on shared_itineraries for insert to authenticated with check (true);
+create policy "team republish" on shared_itineraries for update to authenticated using (true);
+
+-- Public feedback page (write-only for visitors)
+create table if not exists feedback_public (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz default now(),
+  client_name text, rating int, comment text, imported boolean default false
+);
+alter table feedback_public enable row level security;
+create policy "public feedback" on feedback_public for insert to anon with check (true);
+create policy "team read fb" on feedback_public for select to authenticated using (true);
+create policy "team upd fb"  on feedback_public for update to authenticated using (true);`;
+  openModal({ title:'Supabase setup SQL', wide:true,
+    bodyHTML:`<p class="text-xs text-muted mb-2">1. Create a free project at supabase.com &nbsp;2. Run this in the SQL Editor &nbsp;3. Add your team under Authentication → Users &nbsp;4. Paste the project URL and anon key above.</p>
+      <textarea rows="18" class="font-mono !text-[11px]" readonly>${esc(sql)}</textarea>`,
+    footHTML:`<div class="flex justify-end gap-2"><button class="btn btn-outline" data-action="modal-close">Close</button>
+      <button class="btn btn-primary" id="copy-sql-btn">Copy SQL</button></div>`,
+    onMount:()=>{ $('#copy-sql-btn').addEventListener('click', ()=>{
+      const ta=$('#modal-root textarea'); ta.select();
+      try{ document.execCommand('copy'); toast('SQL copied'); }catch(e){ toast('Select and copy manually','warn'); } }); }});
+}
+
+function exportData(){
+  const blob=new Blob([JSON.stringify(STATE,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=`btw-crm-backup-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast('Backup downloaded');
+}
+function importData(file){
+  const r=new FileReader();
+  r.onload=async ()=>{
+    try{
+      const p=JSON.parse(r.result);
+      if(!p.leads||!p.settings) throw new Error('invalid');
+      STATE=p; backfillState(); await saveState(); render(); toast('Backup imported');
+    }catch(e){ toast('That file is not a valid backup','err'); }
+  };
+  r.readAsText(file);
+}
+function resetAllData(){
+  confirmDialog('This permanently erases all CRM data. Export a backup first if you need one. Continue?', async ()=>{
+    STATE=defaultState(); seedDemoData(); await saveState(); navigate('dashboard'); render(); toast('Data reset');
+  });
+}
+
+// =========================================================================
+// AUTH GATE
+// =========================================================================
+function showAuthGate(msg){
+  $('#auth-gate').classList.remove('hidden');
+  if(msg){ const m=$('#auth-msg'); m.textContent=msg; m.classList.remove('hidden'); }
+}
+function hideAuthGate(){ $('#auth-gate').classList.add('hidden'); }
+
+async function doSignIn(){
+  const email=$('#auth-email').value.trim(), pass=$('#auth-pass').value;
+  const m=$('#auth-msg'); m.classList.add('hidden');
+  if(!SB){ m.textContent='Backend not configured.'; m.classList.remove('hidden'); return; }
+  const btn=$('#auth-signin-btn'); btn.disabled=true; btn.textContent='Signing in…';
+  try{
+    const { data, error } = await SB.auth.signInWithPassword({ email, password: pass });
+    if(error) throw error;
+    SESSION = data.session; SYNC='online';
+    const cloud = await sbLoadState();
+    if(cloud){ STATE = cloud; backfillState(); await persistSet(STORAGE_KEY, JSON.stringify(STATE)); }
+    else { await sbSaveState(); }
+    hideAuthGate(); render(); toast('Signed in — team sync is on');
+  }catch(err){
+    console.error(err);
+    m.textContent = (err && err.message) ? err.message : 'Sign in failed.';
+    m.classList.remove('hidden');
+  }finally{ btn.disabled=false; btn.textContent='Sign in'; }
+}
+async function signOut(){
+  try{ await SB?.auth.signOut(); }catch(e){}
+  SESSION=null; SYNC='local'; render(); toast('Signed out — working on this device');
+}
+async function pullFromCloud(){
+  try{
+    const cloud=await sbLoadState();
+    if(!cloud){ toast('Nothing saved in the cloud yet','warn'); return; }
+    STATE=cloud; backfillState(); await persistSet(STORAGE_KEY, JSON.stringify(STATE));
+    render(); toast('Pulled the latest team data');
+  }catch(err){ console.error(err); toast('Could not pull from cloud','err'); }
+}
+
+// =========================================================================
+// EVENT DELEGATION
+// =========================================================================
+function handleClick(e){
+  const t = e.target.closest('[data-action]');
+  if(!t) return;
+  const a = t.dataset.action, id = t.dataset.id;
+  switch(a){
+    case 'modal-close': closeModal(); break;
+    case 'nav': navigate(t.dataset.view, t.dataset.id||null); break;
+    case 'toggle-menu': $('#sidebar').classList.toggle('open'); break;
+    case 'open-palette': openPalette(); break;
+    case 'palette-go': paletteGo(Number(t.dataset.i)); break;
+
+    // leads
+    case 'new-lead': openLeadModal(); break;
+    case 'edit-lead': openLeadModal(id); break;
+    case 'lead-wa': leadWhatsAppModal(id); break;
+    case 'lead-log': leadLogModal(id); break;
+    case 'lead-to-itinerary': newItineraryModal(id); break;
+    case 'lead-view': leadView=t.dataset.v; render(); break;
+    case 'fetch-inquiries': fetchInquiries(); break;
+    case 'import-inquiry': importInquiry(id); break;
+
+    // itineraries
+    case 'new-itinerary': newItineraryModal(); break;
+    case 'open-itinerary': navigate('itineraries', id); break;
+    case 'compare-itineraries': compareItinerariesModal(); break;
+    case 'duplicate-itinerary': duplicateItinerary(id); break;
+    case 'delete-itinerary': confirmDialog('Delete this itinerary?', ()=>{
+        STATE.itineraries=STATE.itineraries.filter(x=>x.id!==id); saveState(); navigate('itineraries'); toast('Itinerary deleted'); }); break;
+    case 'add-day': addDay(id); break;
+    case 'delete-day': deleteDay(t.dataset.id, t.dataset.day); break;
+    case 'ai-generate': handleAIGenerate(id); break;
+    case 'add-option': optionModal(id); break;
+    case 'edit-option': optionModal(t.dataset.id, t.dataset.opt); break;
+    case 'print-itinerary': printItinerary(id); break;
+    case 'print-photo-itinerary': printPhotoItinerary(id); break;
+    case 'fetch-photos': fetchPhotos(id); break;
+    case 'ai-copy-prompt': aiCopyPrompt(id); break;
+    case 'ai-paste-result': aiPasteResult(id); break;
+    case 'print-comparison': printComparison(id); break;
+    case 'make-flyer': makeFlyer(id); break;
+    case 'wa-itinerary': waItinerary(id); break;
+    case 'print-node': { const n=document.getElementById(t.dataset.target); if(n) printHTML(n.innerHTML); break; }
+
+    // bookings
+    case 'itinerary-to-booking': itineraryToBooking(id); break;
+    case 'edit-booking': editBookingModal(id); break;
+    case 'voucher-booking': printVoucher(id); break;
+    case 'wa-daily': waDailyProgramme(id); break;
+    case 'invoice-from-booking': newInvoiceModal(id); break;
+
+    // money
+    case 'new-invoice': newInvoiceModal(); break;
+    case 'record-payment': recordPaymentModal(id); break;
+    case 'print-invoice': printInvoice(id); break;
+    case 'print-receipt': printReceipt(id); break;
+    case 'wa-invoice': waInvoice(id); break;
+    case 'wa-receipt': waReceipt(id); break;
+
+    // visa
+    case 'new-visa': visaModal(); break;
+    case 'edit-visa': visaModal(id); break;
+    case 'wa-visa': waVisaChecklist(id); break;
+
+    // corporate
+    case 'new-company': companyModal(); break;
+    case 'edit-company': companyModal(id); break;
+    case 'open-company': navigate('corporate', id); break;
+    case 'add-employee': employeeModal(id); break;
+    case 'remove-employee': {
+      const c=STATE.companies.find(x=>x.id===t.dataset.id);
+      if(c){ c.employees=c.employees.filter(x=>x.id!==t.dataset.emp); saveState(); render(); toast('Employee removed'); }
+      break; }
+    case 'employee-lead': {
+      const c=STATE.companies.find(x=>x.id===t.dataset.id);
+      const emp=c?.employees.find(x=>x.id===t.dataset.emp);
+      if(emp) openLeadModal(null, {name:emp.name, phone:emp.phone, email:emp.email, source:'Corporate', travellerType:'Corporate group'});
+      break; }
+
+    // tasks / vendors / clients / feedback
+    case 'toggle-task': toggleTask(id, t.checked); break;
+    case 'task-filter': taskFilter=t.dataset.filter; render(); break;
+    case 'new-task': taskModal(); break;
+    case 'edit-task': taskModal(id); break;
+    case 'new-vendor': vendorModal(); break;
+    case 'edit-vendor': vendorModal(id); break;
+    case 'open-client': navigate('clients', id); break;
+    case 'wa-client': { const n=decodeURIComponent(id);
+      quickWaModal('WhatsApp '+n, `Hello ${n},\n\n`, clientPhone(n)); break; }
+    case 'request-feedback': requestFeedback(id); break;
+    case 'new-feedback': feedbackModal(); break;
+    case 'wa-review': waReviewRequest(id); break;
+    case 'fetch-feedback': fetchWebFeedback(); break;
+    case 'share-itinerary': shareItinerary(id); break;
+    case 'calc-distances': computeDistances(id); break;
+    case 'scan-card': scanBusinessCard(); break;
+    case 'wa-auto': {
+      const phone = ($('#wa-phone')?.value || '').trim(), text = $('#wa-text')?.value || '';
+      if(!waNumber(phone)){ toast('Enter a phone number first','warn'); break; }
+      t.disabled=true; t.textContent='Sending…';
+      callBackend('whatsapp_send', { to: waNumber(phone), text })
+        .then(()=>{ closeModal(); toast('Sent via WhatsApp Business API'); })
+        .catch(err=>{ console.error(err); t.disabled=false; t.textContent='Send automatically';
+          toast(err.message.includes('24') ? 'Outside the 24-hour window — use a template or tap-to-send' : 'Auto-send failed: '+err.message, 'err'); });
+      break; }
+
+    // settings
+    case 'save-settings': saveSettingsFromForm(); break;
+    case 'add-team': addTeamModal(); break;
+    case 'remove-team': {
+      STATE.settings.team=STATE.settings.team.filter(x=>x.id!==id); saveState(); render(); toast('Team member removed'); break; }
+    case 'save-integrations': saveIntegrations(); break;
+    case 'show-sql': showSqlSetup(); break;
+    case 'pull-cloud': pullFromCloud(); break;
+    case 'sign-out': signOut(); break;
+    case 'export-data': exportData(); break;
+    case 'reset-data': resetAllData(); break;
+    default: break;
+  }
+}
+
+function handleChange(e){
+  const t=e.target;
+  if(t.id==='import-file'){ if(t.files && t.files[0]) importData(t.files[0]); return; }
+  const a=t.dataset ? t.dataset.action : null;
+  if(a==='itin-field'){ updateItineraryField(t.dataset.id||ROUTE.id, t.dataset.field, t.value); render(); return; }
+  if(a==='itin-list'){ updateItineraryList(ROUTE.id, t.dataset.field, t.value); return; }
+  if(a==='day-field'){ updateDayField(t.dataset.id, t.dataset.day, t.dataset.field, t.value); return; }
+  if(a==='lead-owner-filter'){ leadFilterOwner=t.value; render(); return; }
+}
+
+function wireGlobalEvents(){
+  document.body.addEventListener('click', handleClick);
+  document.body.addEventListener('change', handleChange);
+  document.addEventListener('keydown', e=>{
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); return; }
+    if(e.key==='/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)){ e.preventDefault(); openPalette(); return; }
+    if(e.key==='Escape'){ closeModal(); closePalette(); }
+  });
+  $('#auth-signin-btn').addEventListener('click', doSignIn);
+  $('#auth-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doSignIn(); });
+  $('#auth-offline-btn').addEventListener('click', ()=>{ SYNC='offline-forced'; hideAuthGate(); render(); toast('Working offline on this device'); });
+}
+
+// =========================================================================
+// BOOTSTRAP
+// =========================================================================
+async function init(){
+  // config (integration keys) is per-device and never synced
+  try{ const c = await persistGet(CONFIG_KEY); if(c) CONFIG = Object.assign(CONFIG, JSON.parse(c)); }catch(e){}
+
+  const had = await loadLocalState();
+  if(!had){ STATE = defaultState(); seedDemoData(); }
+  backfillState();
+
+  window.addEventListener('hashchange', route);
+  wireGlobalEvents();
+
+  if(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey && initSupabaseClient()){
+    try{
+      const { data } = await SB.auth.getSession();
+      if(data && data.session){
+        SESSION = data.session; SYNC='online';
+        const cloud = await sbLoadState();
+        if(cloud){ STATE = cloud; backfillState(); }
+      } else {
+        route(); showAuthGate(); return;
+      }
+    }catch(err){ console.error(err); SYNC='local'; }
+  }
+
+  if(!had) await saveState();
+  route();
+}
+init();
+</script>
+</body>
+</html>
