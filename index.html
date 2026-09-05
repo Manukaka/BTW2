@@ -306,7 +306,7 @@ const STORAGE_KEY = 'btw_crm_state_v2';
 const CONFIG_KEY  = 'btw_crm_config_v2';   // integration keys, kept per-device
 const INSIDE_CLAUDE_ARTIFACT = (typeof window.storage !== 'undefined');
 
-let CONFIG = { supabaseUrl:'', supabaseAnonKey:'', backendUrl:'', mapsApiKey:'' };
+let CONFIG = { supabaseUrl:'', supabaseAnonKey:'', backendUrl:'', backendCode:'', mapsApiKey:'', aiProvider:'anthropic', aiApiKey:'', aiModel:'' };
 let SB = null;              // supabase client when configured
 let SESSION = null;         // supabase auth session
 let SYNC = 'local';         // 'local' | 'online' | 'offline-forced'
@@ -415,18 +415,87 @@ function setSyncBadge(){
 }
 
 // ---------- Backend function (Supabase Edge Function) ----------
-function backendReady(){ return !!(CONFIG.backendUrl && sbReady()); }
+function backendReady(){ return !!(CONFIG.backendUrl && (sbReady() || CONFIG.backendCode)); }
+function backendToken(){ return sbReady() ? SESSION.access_token : CONFIG.backendCode; }
 async function callBackend(task, payload){
   if(!backendReady()) throw new Error('Backend not connected');
-  const resp = await fetch(CONFIG.backendUrl, {
-    method:'POST',
-    headers:{ 'Content-Type':'application/json', 'apikey':CONFIG.supabaseAnonKey,
-              'Authorization':'Bearer '+SESSION.access_token },
-    body: JSON.stringify({ task, payload })
-  });
+  const headers = { 'Content-Type':'application/json', 'Authorization':'Bearer '+backendToken() };
+  if(CONFIG.supabaseAnonKey) headers['apikey'] = CONFIG.supabaseAnonKey;
+  const resp = await fetch(CONFIG.backendUrl, { method:'POST', headers, body: JSON.stringify({ task, payload }) });
   const data = await resp.json().catch(()=>({}));
   if(!resp.ok || data.error) throw new Error(data.error || ('Backend error '+resp.status));
   return data;
+}
+
+// ---------- AI (three ways, first available wins) ----------
+// 1) Backend function — the key lives in Netlify env vars (best for the whole team)
+// 2) API key saved on this device (Settings → AI assistant) — quickest, per browser
+// 3) Inside a Claude artifact the key is injected automatically
+const AI_DEFAULT_MODEL = { anthropic:'claude-opus-5', gemini:'gemini-2.0-flash' };
+const AI_PROVIDER_LABEL = { anthropic:'Anthropic Claude', gemini:'Google Gemini' };
+const PASSPORT_OCR_SYSTEM = `You read passport photos for a travel agency. Extract fields and reply with ONLY a JSON object, no commentary:
+{"fullName":"Given names + surname as printed","passportNumber":"","nationality":"","dateOfBirth":"YYYY-MM-DD","expiryDate":"YYYY-MM-DD","issueDate":"YYYY-MM-DD","sex":"","placeOfBirth":""}
+Use the MRZ lines to verify the passport number, DOB and expiry when visible. Leave a field as empty string if unreadable. Never guess.`;
+const CARD_OCR_SYSTEM = `You read business cards for a travel agency's vendor database. Reply with ONLY a JSON object, no commentary:
+{"name":"person's name","designation":"","company":"","phone":"primary phone with country code if shown","email":"","website":"","address":"","city":""}
+Leave unreadable fields as empty strings. Never invent values.`;
+
+function aiProvider(){ return CONFIG.aiProvider==='gemini' ? 'gemini' : 'anthropic'; }
+function aiModel(){ return (CONFIG.aiModel||'').trim() || AI_DEFAULT_MODEL[aiProvider()]; }
+function aiDirectReady(){ return !!(CONFIG.aiApiKey||'').trim(); }
+function aiReady(){ return backendReady() || aiDirectReady() || INSIDE_CLAUDE_ARTIFACT; }
+function aiNotSetupMessage(){ return 'AI is not set up yet — paste an API key in Settings → AI assistant, or connect the backend.'; }
+
+async function callAnthropicDirect(system, content, maxTokens){
+  const headers = { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01' };
+  const body = { model: aiModel(), max_tokens:maxTokens, system, messages:[{role:'user', content}] };
+  if(aiDirectReady()){
+    headers['x-api-key'] = CONFIG.aiApiKey.trim();
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';   // required for browser → api.anthropic.com
+    headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';    // if the model declines, Anthropic retries on a fallback model
+    body.fallbacks = 'default';
+  }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', { method:'POST', headers, body: JSON.stringify(body) });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error(data?.error?.message || ('AI request failed ('+resp.status+')'));
+  if(data.stop_reason==='refusal') throw new Error('The AI declined this request');
+  return (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+}
+async function callGeminiDirect(system, parts, maxTokens){
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(aiModel())+':generateContent';
+  const resp = await fetch(url, {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'x-goog-api-key':CONFIG.aiApiKey.trim() },
+    body: JSON.stringify({ systemInstruction:{ parts:[{text:system}] }, contents:[{ role:'user', parts }],
+      generationConfig:{ maxOutputTokens:maxTokens, temperature:0.4 } })
+  });
+  const data = await resp.json().catch(()=>({}));
+  if(!resp.ok) throw new Error(data?.error?.message || ('AI request failed ('+resp.status+')'));
+  return (data.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('\n');
+}
+// Text in → text out, using whichever route is available (backend first).
+async function aiText(system, prompt, maxTokens=1000){
+  if(!INSIDE_CLAUDE_ARTIFACT && backendReady()){ const r = await callBackend('ai_itinerary', { system, prompt }); return r.text||''; }
+  return aiDirectText(system, prompt, maxTokens);
+}
+// Same, but always uses the key saved on this device (or the Claude artifact) — used by "Test AI".
+async function aiDirectText(system, prompt, maxTokens=1000){
+  if(aiDirectReady() && aiProvider()==='gemini') return callGeminiDirect(system, [{text:prompt}], maxTokens);
+  if(aiDirectReady() || INSIDE_CLAUDE_ARTIFACT) return callAnthropicDirect(system, prompt, maxTokens);
+  throw new Error(aiNotSetupMessage());
+}
+// Photo of a passport / business card → {fields}. task = 'ocr_passport' | 'ocr_card'
+async function aiOcr(task, file){
+  const image = await fileToBase64(file), mediaType = file.type||'image/jpeg';
+  if(!INSIDE_CLAUDE_ARTIFACT && backendReady()){ const r = await callBackend(task, { image, mediaType }); return r.fields||{}; }
+  const system = task==='ocr_passport' ? PASSPORT_OCR_SYSTEM : CARD_OCR_SYSTEM;
+  let text;
+  if(aiDirectReady() && aiProvider()==='gemini')
+    text = await callGeminiDirect(system, [{ inlineData:{ mimeType:mediaType, data:image } }, { text:'Extract the fields.' }], 600);
+  else if(aiDirectReady() || INSIDE_CLAUDE_ARTIFACT)
+    text = await callAnthropicDirect(system, [{ type:'image', source:{ type:'base64', media_type:mediaType, data:image } }, { type:'text', text:'Extract the fields.' }], 600);
+  else throw new Error(aiNotSetupMessage());
+  try{ return JSON.parse(text.replace(/```json|```/g,'').trim()) || {}; }
+  catch(e){ throw new Error('Could not read the document'); }
 }
 function publicBase(){ return location.origin + location.pathname.replace(/[^/]*$/,''); }
 function fileToBase64(file){
@@ -1273,7 +1342,7 @@ function renderItineraryBuilder(id){
   <div class="ticket p-5 mb-5">
     <div class="board-label text-[11px] text-gold mb-1">✦ AI Itinerary Assistant</div>
     <p class="text-xs text-muted mb-3">Drafts a day-by-day plan in ${esc(it.language||'English')} for a ${esc(it.travellerType||'Family')} trip at a ${esc(it.travelPace||'Balanced')} pace. Always check prices, opening hours and entry rules yourself before sending.</p>
-    ${(!INSIDE_CLAUDE_ARTIFACT && !backendReady()) ? `<p class="text-xs bg-gold/10 text-navy border border-gold/30 rounded-lg px-3 py-2 mb-3">On the hosted site the AI assistant needs the backend function connected (Settings → Backend). Inside Claude it works directly.</p>`:''}
+    ${!aiReady() ? `<p class="text-xs bg-gold/10 text-navy border border-gold/30 rounded-lg px-3 py-2 mb-3">To use <strong>Generate</strong>, paste an AI API key in <a href="#settings" class="underline font-semibold">Settings → AI assistant</a> (takes a minute), or connect the backend. The free copy/paste option below always works.</p>`:''}
     <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 items-end">
       <div><label class="field-label">Days</label><input type="number" id="ai-days" value="${Math.max(it.days.length,3)}" min="1" max="14"></div>
       <div><label class="field-label">Budget</label><select id="ai-budget">${BUDGET_LEVELS.map(b=>`<option ${b==='Mid-range'?'selected':''}>${b}</option>`).join('')}</select></div>
@@ -1492,23 +1561,10 @@ function optionModal(itId, optId=null){
 
 // ---------- AI Itinerary Assistant (multi-language) ----------
 async function generateAIItinerary(it, numDays, budget, interests){
-  const lang = it.language || 'English';
-  const sys = `You are a meticulous travel itinerary planner for an Indian travel agency. Respond with ONLY a raw JSON array, no markdown fences and no commentary. Each element must be {"title":"...","hotel":"...","transport":"...","notes":"..."}. Write the VALUES in ${lang}, but keep the JSON keys in English exactly as given. Keep every field brief.`;
-  const usr = `Plan ${numDays} day(s) in ${it.destination} for ${it.pax} traveller(s). Traveller type: ${it.travellerType||'Family'}. Pace: ${it.travelPace||'Balanced'}. Budget level: ${budget}. Interests: ${interests||'general sightseeing'}. Return exactly ${numDays} array elements in day order.`;
-  let text = '';
-  if(!INSIDE_CLAUDE_ARTIFACT && backendReady()){
-    const r = await callBackend('ai_itinerary', { system:sys, prompt:usr });
-    text = r.text || '';
-  } else {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ model:'claude-sonnet-4-6', max_tokens:1000, system:sys, messages:[{role:'user', content:usr}] })
-    });
-    if(!resp.ok) throw new Error('AI request failed ('+resp.status+')');
-    const data = await resp.json();
-    text = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
-  }
-  const parsed = JSON.parse(text.replace(/```json|```/g,'').trim());
+  const { sys, usr } = buildAIPrompt(it, numDays, budget, interests);
+  const text = await aiText(sys, usr, 1000);
+  const m = text.match(/\[[\s\S]*\]/);
+  const parsed = JSON.parse(m ? m[0] : text.replace(/```json|```/g,'').trim());
   if(!Array.isArray(parsed)) throw new Error('Unexpected AI response');
   return parsed;
 }
@@ -1561,9 +1617,9 @@ async function handleAIGenerate(itId){
     applyAIPlan(it, plan); toast('AI draft inserted — review before sending');
   }catch(err){
     console.error(err);
-    st.textContent = 'Could not generate right now. You can still build the plan manually below.';
+    st.textContent = (aiReady() ? 'Could not generate right now ('+(err.message||'error')+'). ' : aiNotSetupMessage()+' ') + 'You can still build the plan manually below.';
     btn.disabled=false; btn.textContent='Generate';
-    toast('AI generation failed','err');
+    toast(aiReady() ? 'AI generation failed' : 'Add an AI key in Settings first','err');
   }
 }
 
@@ -2109,7 +2165,7 @@ function visaModal(id=null){
         ${fieldHTML({name:'clientName', label:'Client name', required:true, value:v?.clientName, full:true})}
         ${fieldHTML({name:'phone', label:'Phone', value:v?.phone})}
         <div class="sm:col-span-2 mb-3 flex items-center gap-2">
-          ${backendReady()?`<button type="button" class="btn btn-outline btn-sm" id="scan-passport-btn">📷 Scan passport</button>
+          ${aiReady()?`<button type="button" class="btn btn-outline btn-sm" id="scan-passport-btn">📷 Scan passport</button>
             <span class="text-[11px] text-muted">Reads name, passport no., DOB, expiry and nationality from a photo.</span>`
             :`<span class="text-[11px] text-muted">Passport scanning is available once the backend is connected in Settings.</span>`}
         </div>
@@ -2142,8 +2198,7 @@ function visaModal(id=null){
         const file = await pickImage(); if(!file) return;
         const b=$('#scan-passport-btn'); b.disabled=true; b.textContent='Reading…';
         try{
-          const r = await callBackend('ocr_passport', { image: await fileToBase64(file), mediaType: file.type||'image/jpeg' });
-          const f = r.fields||{};
+          const f = await aiOcr('ocr_passport', file);
           const set=(n,v)=>{ const el=document.querySelector(`[name="${n}"]`); if(el && v) el.value=v; };
           set('clientName', f.fullName); set('passportNo', f.passportNumber); set('nationality', f.nationality);
           set('dob', f.dateOfBirth); set('passportExpiry', f.expiryDate);
@@ -2320,7 +2375,7 @@ VIEWS.vendors = function(){
   return `<div class="flex flex-wrap items-center justify-between gap-3 mb-4">
       <div class="text-sm text-muted">${STATE.vendors.length} vendors on file.</div>
       <div class="flex gap-2">
-        ${backendReady()?`<button class="btn btn-outline btn-sm" data-action="scan-card">📷 Scan business card</button>`:''}
+        ${aiReady()?`<button class="btn btn-outline btn-sm" data-action="scan-card">📷 Scan business card</button>`:''}
         <button class="btn btn-primary btn-sm" data-action="new-vendor">+ New Vendor</button></div></div>
     ${renderTable({columns:cols, rows:STATE.vendors, emptyText:'No vendors added yet.'})}`;
 };
@@ -2328,8 +2383,7 @@ async function scanBusinessCard(){
   const file = await pickImage(); if(!file) return;
   toast('Reading card…');
   try{
-    const r = await callBackend('ocr_card', { image: await fileToBase64(file), mediaType: file.type||'image/jpeg' });
-    const f = r.fields||{};
+    const f = await aiOcr('ocr_card', file);
     vendorModal(null, {name:f.company||f.name||'', contact:f.name||'', phone:f.phone||'', email:f.email||'',
       city:f.city||'', notes:[f.designation, f.website, f.address].filter(Boolean).join(' · ')});
   }catch(err){ console.error(err); toast('Could not read the card image','err'); }
@@ -2524,10 +2578,6 @@ VIEWS.settings = function(){
       <form id="integrations-form" class="grid grid-cols-1 gap-x-4">
         ${fieldHTML({name:'supabaseUrl', label:'Supabase project URL', type:'url', value:CONFIG.supabaseUrl, placeholder:'https://xxxx.supabase.co'})}
         ${fieldHTML({name:'supabaseAnonKey', label:'Supabase anon (public) key', value:CONFIG.supabaseAnonKey, placeholder:'eyJhbGciOi...'})}
-        ${fieldHTML({name:'backendUrl', label:'Backend function URL (AI, scanning, WhatsApp auto-send)', type:'url', value:CONFIG.backendUrl,
-          placeholder:'https://xxxx.supabase.co/functions/v1/btw-backend', hint:'Deploy the btw-backend function from the setup guide, then paste its URL.'})}
-        ${fieldHTML({name:'mapsApiKey', label:'Google Maps API key (auto distances)', value:CONFIG.mapsApiKey,
-          hint:'Restrict this key to your domain in Google Cloud Console → it is safe to use in the browser.'})}
       </form>
       <div class="flex flex-wrap gap-2">
         <button class="btn btn-primary btn-sm" data-action="save-integrations">Save & connect</button>
@@ -2538,6 +2588,42 @@ VIEWS.settings = function(){
       <div class="text-xs text-muted mt-3">Public pages served from this site: <span class="font-mono">${esc(publicBase())}inquiry-form.html</span>, <span class="font-mono">view-itinerary.html</span>, <span class="font-mono">feedback.html</span> — configure them once in <span class="font-mono">public-config.js</span>.</div>
       <div class="text-xs mt-2 ${SYNC==='online'?'text-success':'text-muted'}">
         ${SYNC==='online'?'✓ Connected — changes sync to your team automatically.':'Not connected — data stays on this device.'}</div>
+    </div>
+
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-1">AI assistant — API key</div>
+      <p class="text-xs text-muted mb-3">Quickest way to switch on AI itineraries and passport / business-card scanning: paste an API key here. It is saved only in this browser — never in the code, never synced to the team — so repeat this on each device, or use the backend option below to set the key once for everyone.</p>
+      <form id="ai-key-form" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+        ${fieldHTML({name:'aiProvider', label:'AI provider', type:'select', value:aiProvider(),
+          options:[{value:'anthropic', label:'Anthropic Claude — console.anthropic.com (pay per use)'},{value:'gemini', label:'Google Gemini — aistudio.google.com (free tier)'}]})}
+        ${fieldHTML({name:'aiApiKey', label:'API key', type:'password', value:CONFIG.aiApiKey, placeholder:'sk-ant-… or AIza…'})}
+        ${fieldHTML({name:'aiModel', label:'Model (optional)', value:CONFIG.aiModel, full:true,
+          placeholder:`${AI_DEFAULT_MODEL.anthropic}  /  ${AI_DEFAULT_MODEL.gemini}`, hint:'Leave blank to use the recommended model for the provider you picked.'})}
+      </form>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-primary btn-sm" data-action="save-ai-key">Save key</button>
+        <button class="btn btn-outline btn-sm" data-action="test-ai-key">Test AI</button>
+        ${aiDirectReady()?`<button class="btn btn-outline btn-sm" data-action="clear-ai-key">Remove key</button>`:''}
+      </div>
+      <div id="ai-key-status" class="text-xs mt-3 ${aiDirectReady()?'text-success':'text-muted'}">${aiKeyStatusText()}</div>
+    </div>
+
+    <div class="ticket p-5 mb-5">
+      <div class="font-display text-base font-semibold mb-1">Team backend — AI, scanning & WhatsApp</div>
+      <p class="text-xs text-muted mb-3">The team-wide option: the API key lives in Netlify's environment variables (<span class="font-mono">ANTHROPIC_API_KEY</span> or <span class="font-mono">GEMINI_API_KEY</span>) and this small backend uses it on your behalf — no key on any device. Also needed for WhatsApp automatic sending. The access code below just proves it's your CRM calling.</p>
+      <form id="backend-form" class="grid grid-cols-1 gap-x-4">
+        ${fieldHTML({name:'backendUrl', label:'Backend URL', type:'url', value:CONFIG.backendUrl,
+          placeholder: publicBase()+'.netlify/functions/btw-backend', hint:'On Netlify this is your site address + /.netlify/functions/btw-backend'})}
+        ${fieldHTML({name:'backendCode', label:'Backend access code', type:'password', value:CONFIG.backendCode,
+          hint:'Must match CRM_ACCESS_CODE in Netlify environment variables. Not needed if team login is on.'})}
+        ${fieldHTML({name:'mapsApiKey', label:'Google Maps API key (auto distances)', value:CONFIG.mapsApiKey,
+          hint:'Restrict this key to your domain in Google Cloud Console — then it is safe in the browser.'})}
+      </form>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-primary btn-sm" data-action="save-backend">Save</button>
+        <button class="btn btn-outline btn-sm" data-action="test-backend">Test connection</button>
+      </div>
+      <div id="backend-status" class="text-xs mt-3 ${backendReady()?'text-success':'text-muted'}">${backendReady()?'Configured — press Test connection to verify.':'Not configured.'}</div>
     </div>
 
     <div class="ticket p-5 mb-5">
@@ -2554,7 +2640,8 @@ VIEWS.settings = function(){
       <ul class="text-xs text-muted list-disc pl-4 space-y-1.5">
         <li><strong class="text-ink">Tap-to-send WhatsApp, proposals, flyers, invoices, receipts, visa checklists</strong> — working now, no accounts needed.</li>
         <li><strong class="text-ink">Team login, multi-device sync, web inquiry form, public itinerary links, public feedback page</strong> — built; needs the free Supabase project (steps above).</li>
-        <li><strong class="text-ink">AI itineraries on this site, passport & business-card scanning, WhatsApp automatic sending</strong> — built; needs the backend function deployed with an Anthropic API key and (for auto-send) a WhatsApp Business API token. ${backendReady()?'<span class="text-success font-semibold">Connected ✓</span>':'<span class="text-gold font-semibold">Not connected</span>'}</li>
+        <li><strong class="text-ink">AI itineraries, passport & business-card scanning</strong> — built; needs an AI API key (paste one above for this device, or set it in Netlify for the team backend). ${aiReady()?'<span class="text-success font-semibold">Ready ✓</span>':'<span class="text-gold font-semibold">No key yet</span>'}</li>
+        <li><strong class="text-ink">WhatsApp automatic sending</strong> — built; needs the team backend with a WhatsApp Business API token in Netlify. ${backendReady()?'<span class="text-success font-semibold">Backend connected ✓</span>':'<span class="text-gold font-semibold">Not connected</span>'}</li>
         <li><strong class="text-ink">Automatic distances & travel times</strong> — built; needs a Google Maps API key. ${CONFIG.mapsApiKey?'<span class="text-success font-semibold">Key saved ✓</span>':'<span class="text-gold font-semibold">No key</span>'}</li>
       </ul>
     </div>
@@ -2579,8 +2666,6 @@ async function saveIntegrations(){
   const fd=new FormData($('#integrations-form'));
   CONFIG.supabaseUrl = (fd.get('supabaseUrl')||'').trim().replace(/\/$/,'');
   CONFIG.supabaseAnonKey = (fd.get('supabaseAnonKey')||'').trim();
-  CONFIG.backendUrl = (fd.get('backendUrl')||'').trim();
-  CONFIG.mapsApiKey = (fd.get('mapsApiKey')||'').trim();
   await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
   if(!CONFIG.supabaseUrl || !CONFIG.supabaseAnonKey){
     SB=null; SESSION=null; SYNC='local'; render(); toast('Disconnected — working on this device only');
@@ -2590,6 +2675,59 @@ async function saveIntegrations(){
   showAuthGate();
 }
 
+async function saveBackendSettings(){
+  const fd=new FormData($('#backend-form'));
+  CONFIG.backendUrl = (fd.get('backendUrl')||'').trim();
+  CONFIG.backendCode = (fd.get('backendCode')||'').trim();
+  CONFIG.mapsApiKey = (fd.get('mapsApiKey')||'').trim();
+  await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
+  render(); toast('Backend settings saved on this device');
+}
+function aiKeyStatusText(){
+  if(aiDirectReady()) return `Key saved on this device — ${AI_PROVIDER_LABEL[aiProvider()]}, model ${aiModel()}. Press Test AI to verify.`;
+  if(backendReady()) return 'No key on this device — AI requests go through the team backend below.';
+  return 'Not set up — AI itineraries and scanning stay off until you add a key here or connect the backend below.';
+}
+function readAIKeyForm(){
+  const fd=new FormData($('#ai-key-form'));
+  CONFIG.aiProvider = fd.get('aiProvider')==='gemini' ? 'gemini' : 'anthropic';
+  CONFIG.aiApiKey = (fd.get('aiApiKey')||'').trim();
+  CONFIG.aiModel = (fd.get('aiModel')||'').trim();
+}
+async function saveAIKey(){
+  readAIKeyForm();
+  await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
+  render(); toast(CONFIG.aiApiKey ? 'AI key saved on this device' : 'AI key removed from this device');
+}
+async function clearAIKey(){
+  CONFIG.aiApiKey=''; await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
+  render(); toast('AI key removed from this device');
+}
+async function testAIKey(){
+  const st=$('#ai-key-status');
+  readAIKeyForm();
+  await persistSet(CONFIG_KEY, JSON.stringify(CONFIG));
+  if(!aiDirectReady() && !INSIDE_CLAUDE_ARTIFACT){ st.textContent='Paste an API key first.'; st.className='text-xs mt-3 text-danger'; return; }
+  st.textContent='Testing…'; st.className='text-xs mt-3 text-muted';
+  try{
+    const reply = await aiDirectText('You are a connectivity check. Reply with exactly the word OK and nothing else.', 'Say OK.', 20);
+    st.textContent = `Working ✓ — ${AI_PROVIDER_LABEL[aiProvider()]} (${aiModel()}) replied "${reply.trim().slice(0,40)}". AI itineraries and scanning are on for this device.`;
+    st.className='text-xs mt-3 text-success';
+  }catch(err){
+    const msg = /Failed to fetch|NetworkError/i.test(err.message||'') ? 'The browser could not reach the AI service — check your internet, the key, and that the model name is right.' : err.message;
+    st.textContent='Failed: '+msg; st.className='text-xs mt-3 text-danger';
+  }
+}
+async function testBackend(){
+  const st=$('#backend-status');
+  if(!backendReady()){ st.textContent='Enter the backend URL and access code first (or sign in with team login).'; st.className='text-xs mt-3 text-danger'; return; }
+  st.textContent='Testing…'; st.className='text-xs mt-3 text-muted';
+  try{
+    const r = await callBackend('ping', {});
+    st.textContent = `Connected ✓ — AI provider: ${r.ai==='none'?'none (add ANTHROPIC_API_KEY or GEMINI_API_KEY in Netlify)':r.ai}, WhatsApp auto-send: ${r.whatsapp?'ready':'not configured'}`;
+    st.className = 'text-xs mt-3 '+(r.ai==='none'?'text-gold':'text-success');
+  }catch(err){ st.textContent='Failed: '+err.message; st.className='text-xs mt-3 text-danger'; }
+}
 function showSqlSetup(){
   const sql = `-- Run this once in Supabase → SQL Editor
 
@@ -2830,6 +2968,11 @@ function handleClick(e){
     case 'remove-team': {
       STATE.settings.team=STATE.settings.team.filter(x=>x.id!==id); saveState(); render(); toast('Team member removed'); break; }
     case 'save-integrations': saveIntegrations(); break;
+    case 'save-backend': saveBackendSettings(); break;
+    case 'test-backend': testBackend(); break;
+    case 'save-ai-key': saveAIKey(); break;
+    case 'test-ai-key': testAIKey(); break;
+    case 'clear-ai-key': clearAIKey(); break;
     case 'show-sql': showSqlSetup(); break;
     case 'pull-cloud': pullFromCloud(); break;
     case 'sign-out': signOut(); break;
