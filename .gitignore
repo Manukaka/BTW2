@@ -1,0 +1,10 @@
+# Secrets — never commit real keys. Set them in Netlify → Site configuration → Environment variables.
+.env
+.env.*
+!.env.example
+
+node_modules/
+.netlify/
+test-results/
+*.log
+.DS_Store
